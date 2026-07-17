@@ -1,11 +1,28 @@
 from typing import TYPE_CHECKING
 
 from answer_service.setup.configs.alchemy_config import SQLAlchemyConfig
+from answer_service.setup.configs.asgi_config import ASGIConfig
 from answer_service.setup.configs.logging_config import LogLevel, LoggingConfig
 from answer_service.setup.configs.postgres_config import PostgresConfig
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+def create_asgi_config(
+    *,
+    host: str = "127.0.0.1",
+    port: int = 8080,
+    fastapi_debug: bool = True,
+    allow_credentials: bool = False,
+) -> ASGIConfig:
+    """Object mother for a valid :class:`ASGIConfig` (default CORS lists)."""
+    return ASGIConfig(
+        host=host,
+        port=port,
+        fastapi_debug=fastapi_debug,
+        allow_credentials=allow_credentials,
+    )
 
 
 def create_postgres_config(

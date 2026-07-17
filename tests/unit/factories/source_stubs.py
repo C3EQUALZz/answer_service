@@ -1,6 +1,9 @@
 from answer_service.setup.bootstrap.sources.alchemy_env_source_factory import (
     SQLAlchemyEnvSourceFactory,
 )
+from answer_service.setup.bootstrap.sources.asgi_env_source_factory import (
+    ASGIEnvSourceFactory,
+)
 from answer_service.setup.bootstrap.sources.logging_env_source_factory import (
     LoggingEnvSourceFactory,
 )
@@ -8,11 +11,20 @@ from answer_service.setup.bootstrap.sources.postgres_env_source_factory import (
     PostgresEnvSourceFactory,
 )
 from tests.unit.factories.env_data_factories import (
+    asgi_env,
     logging_env,
     postgres_env,
     sqlalchemy_env,
 )
 from tests.unit.factories.stub_source_factory import StubSourceFactory
+
+
+def asgi_source_stub(**overrides: str) -> StubSourceFactory:
+    """In-memory stub serving valid ``UVICORN_*`` / ``FASTAPI_*`` values."""
+    return StubSourceFactory.mirroring(
+        ASGIEnvSourceFactory(),
+        asgi_env(**overrides),
+    )
 
 
 def postgres_source_stub(**overrides: str) -> StubSourceFactory:

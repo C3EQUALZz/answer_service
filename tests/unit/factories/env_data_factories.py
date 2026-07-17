@@ -29,6 +29,18 @@ def sqlalchemy_env(**overrides: str) -> dict[str, str]:
     return data
 
 
+def asgi_env(**overrides: str) -> dict[str, str]:
+    """Valid ``UVICORN_*`` / ``FASTAPI_*`` env values; override any key."""
+    data = {
+        "UVICORN_HOST": "127.0.0.1",
+        "UVICORN_PORT": "8080",
+        "FASTAPI_DEBUG": "true",
+        "FASTAPI_ALLOW_CREDENTIALS": "false",
+    }
+    data.update(overrides)
+    return data
+
+
 def logging_env(**overrides: str) -> dict[str, str]:
     """Valid logging env values (name -> value); override any key."""
     data = {
