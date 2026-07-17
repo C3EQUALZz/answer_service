@@ -1,0 +1,12 @@
+/venv
+.venv
+/.venv
+/.idea
+.idea
+/.gitignore
+/.github
+/tests
+docker-compose.yaml
+deploy/prod/answer_service/Dockerfile
+./vscode
+/vscode

@@ -1,0 +1,59 @@
+[importlinter]
+root_package = answer_service
+
+
+[importlinter:contract:architecture_layers]
+name = Clean architecture layers (presentation -> application -> domain)
+type = layers
+layers =
+    answer_service.presentation
+    answer_service.application
+    answer_service.domain
+
+
+[importlinter:contract:protected_application_handlers]
+name = Application command/query handlers are protected
+type = protected
+protected_modules =
+    answer_service.application.commands
+    answer_service.application.queries
+allowed_importers =
+    answer_service.application
+    answer_service.presentation
+    answer_service.setup
+    answer_service.infrastructure.scheduler
+
+
+[importlinter:contract:protected_application_ports]
+name = Application ports are implemented only by infrastructure adapters
+type = protected
+protected_modules =
+    answer_service.application.common.ports
+allowed_importers =
+    answer_service.application
+    answer_service.presentation
+    answer_service.infrastructure.adapters
+    answer_service.infrastructure.mappers
+    answer_service.infrastructure.scheduler
+    answer_service.setup
+
+
+[importlinter:contract:protected_infrastructure_adapters]
+name = Infrastructure adapters are wired only from setup
+type = protected
+protected_modules =
+    answer_service.infrastructure.adapters
+allowed_importers =
+    answer_service.infrastructure
+    answer_service.setup
+
+
+[importlinter:contract:protected_persistence_models]
+name = Persistence models are internal to infrastructure
+type = protected
+protected_modules =
+    answer_service.infrastructure.persistence.models
+allowed_importers =
+    answer_service.infrastructure
+    answer_service.setup
+    answer_service.fastapi_app

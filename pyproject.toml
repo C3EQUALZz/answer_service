@@ -1,0 +1,87 @@
+[build-system]
+requires = [
+    "hatchling==1.29.0",
+    "hatch-vcs==0.5.0",
+]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/answer_service/_version.py"
+
+[project]
+name = "answer_service"
+dynamic = ["version"]
+description = "answer service with hybrid search"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+
+authors = [
+    { name = "Danil Kovalev", email = "dan.kovalev2013@gmail.com" },
+]
+
+classifiers = [
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Libraries",
+    "Typing :: Typed",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+
+requires-python = ">=3.14"
+
+dependencies = [
+    "adaptix==3.0.0b12",
+    "alembic==1.18.5",
+    "asyncpg==0.31.0",
+    "dature==0.22.4",
+    "dishka==1.10.1",
+    "fastapi==0.139.2",
+    "polars==1.42.1",
+    "python-multipart==0.0.32",
+    "sqlalchemy[asyncio]==2.0.51",
+    "taskiq==0.12.4",
+    "taskiq-nats==0.6.0",
+    "taskiq-redis==1.2.3",
+]
+
+[project.urls]
+Source = "https://github.com/C3EQUALZz/answer_service"
+Homepage = "https://github.com/C3EQUALZz/answer_service"
+Tracker = "https://github.com/C3EQUALZz/answer_service/issues"
+
+[dependency-groups]
+dev = [
+    {include-group = "lint"},
+    {include-group = "test"},
+    "prek>=0.2.5",
+]
+lint = [
+    "bandit>=1.8.6",
+    "codespell>=2.4.1",
+    "mypy>=1.18.2",
+    "ruff>=0.14.0",
+    "semgrep>=1.139.0",
+    "zizmor>=1.14.2",
+    "import-linter>=2.10",
+]
+test = [
+    "httpx>=0.28.0",
+    "nox>=2025.5.1",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "pytest-cov>=7.0.0",
+    "pytest-mypy>=1.0.0",
+    "testcontainers[postgres]>=4.10.0",
+    "coverage>=7.13.4"
+]
+
+[tool.bandit]
+skips = ["B101"]
+
+[tool.typos.default.extend-words]
+selectin = "selectin"

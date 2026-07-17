@@ -1,0 +1,78 @@
+# Configuration file example:  https://docs.astral.sh/ruff/configuration/
+# All settings:                https://docs.astral.sh/ruff/settings/
+
+fix = true
+preview = true
+
+line-length = 90
+indent-width = 4
+
+target-version = "py314"
+
+include = [
+    "src/answer_service/**/*.py",
+    "tests/**/*.py",
+    "pyproject.toml",
+]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = false
+
+[lint]
+select = [
+    "ALL",
+]
+
+ignore = [
+    "ANN401",
+
+    "PLC2701",  # private name import `_internal` from external module
+
+    # Assign error message to variable
+    "EM101",
+    "EM102",
+
+    # # preview
+    "CPY",
+    "PLR6301",
+
+    "D100",     # missing docstring in public module
+    "D101",
+    "D102",
+    "D103",
+    "D104",     # missing docstring in public package
+    "D105",     # missing docstring in magic methods
+    "D106",     # missing docstring in public nested class
+    "D107",     # missing docstring in __init__
+    "DOC201",
+    "DOC202",
+    "DOC402",
+    "DOC501",
+    "DOC502",
+
+    "COM812", # disable with format
+]
+
+[lint.per-file-ignores]
+# Alembic generates migration filenames with timestamps (e.g. 14_1957_52_...) that start
+# with digits — these are not valid Python identifiers but cannot be renamed.
+# Version subdirs (2026/, 03/) are not Python packages; __init__.py would break mypy.
+"src/answer_service/infrastructure/persistence/migrations/**/*.py" = ["N999", "INP001"]
+
+[lint.isort]
+case-sensitive = true
+combine-as-imports = true
+force-wrap-aliases = true
+
+[lint.pydocstyle]
+convention = "google"
+ignore-decorators = ["typing.overload"]
+
+[lint.flake8-pytest-style]
+fixture-parentheses = true
+mark-parentheses = true
+parametrize-names-type = "tuple"
+parametrize-values-type = "tuple"
+parametrize-values-row-type = "tuple"
