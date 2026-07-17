@@ -38,9 +38,10 @@ class RunIndexingHandler(CommandHandler[RunIndexingCommand, None]):
     """Executes a sync run against the catalog (the search stores follow via events).
 
     Stays inside the unit-of-work provided by the transaction pipeline: it only
-    mutates the catalog and drives the task's lifecycle. Domain events emitted by
-    the aggregates are published (and turned into Qdrant/FTS updates) downstream;
-    failure recording is a separate command, so it survives a work rollback.
+    mutates the catalog and completes the task (already marked ``RUNNING`` by a
+    prior command). Domain events emitted by the aggregates are published (and
+    turned into Qdrant/FTS updates) downstream; failure recording is a separate
+    command, so it survives a work rollback.
     """
 
     def __init__(  # ruff:ignore[too-many-arguments, too-many-positional-arguments]
@@ -68,7 +69,6 @@ class RunIndexingHandler(CommandHandler[RunIndexingCommand, None]):
             msg = f"Indexing task '{command.task_id}' not found."
             raise IndexingTaskNotFoundError(msg)
 
-        task.start()
         stats = await self._run_sync(task.source)
         task.complete(stats)
         await self._task_gateway.update(task)
