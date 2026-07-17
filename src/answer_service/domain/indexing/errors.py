@@ -9,6 +9,10 @@ class InvalidTaskTransitionError(IndexingDomainError):
     """Raised when an indexing task transition violates its state machine."""
 
 
+class DuplicateExternalIdError(IndexingDomainError):
+    """Raised when the source file contains the same external_id more than once."""
+
+
 class EmptyExternalIdError(DomainFieldError):
     """Raised when an external id is empty."""
 
@@ -43,3 +47,7 @@ class NegativeSyncCountError(DomainFieldError):
 
 class EmptyFailureCodeError(DomainFieldError):
     """Raised when a failure code is empty."""
+
+
+class EmptySourceReferenceError(DomainFieldError):
+    """Raised when a source reference is empty."""

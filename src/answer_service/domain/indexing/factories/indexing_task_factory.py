@@ -1,8 +1,13 @@
-from typing import Final, final
+from typing import TYPE_CHECKING, Final, final
 
 from answer_service.domain.common.events_collection import EventsCollection
 from answer_service.domain.indexing.entities.indexing_task import IndexingTask
 from answer_service.domain.indexing.ports.id_generator import TaskIdGenerator
+
+if TYPE_CHECKING:
+    from answer_service.domain.indexing.value_objects.source_reference import (
+        SourceReference,
+    )
 
 
 @final
@@ -21,8 +26,9 @@ class IndexingTaskFactory:
         self._events_collection: Final[EventsCollection] = events_collection
         self._task_id_generator: Final[TaskIdGenerator] = task_id_generator
 
-    def create(self) -> IndexingTask:
+    def create(self, source: SourceReference) -> IndexingTask:
         return IndexingTask.queue(
             task_id=self._task_id_generator(),
+            source=source,
             events_collection=self._events_collection,
         )

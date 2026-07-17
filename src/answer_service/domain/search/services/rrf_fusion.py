@@ -1,0 +1,79 @@
+from typing import TYPE_CHECKING, Final
+
+from answer_service.domain.common.service import BaseDomainService
+from answer_service.domain.search.value_objects.ranked_result import RankedResult
+from answer_service.domain.search.value_objects.result_scores import Scores
+from answer_service.domain.search.value_objects.score import Score
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from answer_service.domain.indexing.value_objects.external_id import ExternalId
+    from answer_service.domain.search.value_objects.scored_candidate import (
+        ScoredCandidate,
+    )
+    from answer_service.domain.search.value_objects.top_k import TopK
+
+DEFAULT_RRF_K: int = 60
+
+
+class RrfFusion(BaseDomainService):
+    """Reciprocal Rank Fusion of dense and lexical retrieval results.
+
+    Each candidate contributes ``1 / (k + rank)`` per retriever it appears in
+    (rank is 1-based position in that retriever's ordered list); contributions
+    are summed into the final score. Fusion is rank-based, so it is immune to
+    the differing score scales of the two retrievers.
+
+    Ordering is deterministic: results are sorted by final score descending,
+    ties broken by ``external_id`` ascending.
+    """
+
+    def __init__(self, k: int = DEFAULT_RRF_K) -> None:
+        self._k: Final[int] = k
+
+    def fuse(
+        self,
+        *,
+        dense: Sequence[ScoredCandidate],
+        lexical: Sequence[ScoredCandidate],
+        top_k: TopK,
+    ) -> tuple[RankedResult, ...]:
+        dense_by_id = {
+            c.external_id: (position, c.score) for position, c in enumerate(dense)
+        }
+        lexical_by_id = {
+            c.external_id: (position, c.score) for position, c in enumerate(lexical)
+        }
+
+        fused: list[tuple[ExternalId, Scores]] = []
+        for external_id in dense_by_id.keys() | lexical_by_id.keys():
+            dense_hit = dense_by_id.get(external_id)
+            lexical_hit = lexical_by_id.get(external_id)
+
+            contribution = 0.0
+            if dense_hit is not None:
+                contribution += 1.0 / (self._k + dense_hit[0] + 1)
+            if lexical_hit is not None:
+                contribution += 1.0 / (self._k + lexical_hit[0] + 1)
+
+            fused.append(
+                (
+                    external_id,
+                    Scores(
+                        final=Score(value=contribution),
+                        dense=dense_hit[1] if dense_hit is not None else None,
+                        lexical=lexical_hit[1] if lexical_hit is not None else None,
+                    ),
+                ),
+            )
+
+        fused.sort(key=lambda item: (-item[1].final.value, item[0].value))
+
+        return tuple(
+            RankedResult(external_id=external_id, rank=position, scores=scores)
+            for position, (external_id, scores) in enumerate(
+                fused[: top_k.value],
+                start=1,
+            )
+        )

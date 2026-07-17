@@ -11,6 +11,7 @@ from answer_service.domain.indexing.events import (
     IndexingTaskQueued,
 )
 from answer_service.domain.indexing.value_objects.failure_info import FailureInfo
+from answer_service.domain.indexing.value_objects.source_reference import SourceReference
 from answer_service.domain.indexing.value_objects.sync_stats import SyncStats
 from answer_service.domain.indexing.value_objects.task_id import TaskId
 from answer_service.domain.indexing.value_objects.task_status import IndexingTaskStatus
@@ -24,10 +25,12 @@ if TYPE_CHECKING:
 class IndexingTask(Aggregate[TaskId]):
     """A single synchronization run of the source file with the search stores.
 
-    Records the lifecycle (``QUEUED -> RUNNING -> SUCCEEDED | FAILED``), timings
-    and the resulting :class:`SyncStats`, so it can back the task-status API.
+    Records the source that was synced, the lifecycle
+    (``QUEUED -> RUNNING -> SUCCEEDED | FAILED``), timings and the resulting
+    :class:`SyncStats`, so it can back the task-status API.
     """
 
+    source: SourceReference
     status: IndexingTaskStatus = field(default=IndexingTaskStatus.QUEUED)
     started_at: datetime | None = field(default=None)
     finished_at: datetime | None = field(default=None)
@@ -35,8 +38,13 @@ class IndexingTask(Aggregate[TaskId]):
     failure: FailureInfo | None = field(default=None)
 
     @classmethod
-    def queue(cls, task_id: TaskId, events_collection: EventsCollection) -> Self:
-        task = cls(id=task_id, events_collection=events_collection)
+    def queue(
+        cls,
+        task_id: TaskId,
+        source: SourceReference,
+        events_collection: EventsCollection,
+    ) -> Self:
+        task = cls(id=task_id, source=source, events_collection=events_collection)
         task.events_collection.add_event(IndexingTaskQueued(task_id=task_id))
         return task
 

@@ -30,9 +30,12 @@ ignore = [
 
     "PLC2701",  # private name import `_internal` from external module
 
-    # dishka resolves DI dependencies from runtime type hints, so first-party
-    # types used in constructor annotations must stay importable at runtime.
+    # dishka (DI) and pydantic (payloads/DTOs) resolve type hints at runtime, so
+    # types used in constructor / model-field annotations must stay importable at
+    # runtime rather than being pushed into a TYPE_CHECKING block.
     "TC001",
+    "TC002",
+    "TC003",
 
     # Assign error message to variable
     "EM101",

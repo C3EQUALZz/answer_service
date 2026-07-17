@@ -19,7 +19,7 @@ class RequestHandler[TRequest: BaseRequest[Any], TResponse](ABC):
 class PipelineHandler[TRequest: BaseRequest[Any] | Event, TResponse](ABC):
     @abstractmethod
     async def handle(
-            self, request: TRequest, handle_next: HandleNext[TRequest, TResponse]
+        self, request: TRequest, handle_next: HandleNext[TRequest, TResponse]
     ) -> TResponse: ...
 
 
