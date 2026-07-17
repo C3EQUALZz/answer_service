@@ -3,8 +3,9 @@ from typing import TYPE_CHECKING, Final, override
 from dature import V, load
 
 from answer_service.setup.bootstrap.loaders.loader import ConfigLoader
-from answer_service.setup.configs.consts import PORT_MAX, PORT_MIN
 from answer_service.setup.configs.postgres_config import PostgresConfig
+
+from .consts import PORT_MAX, PORT_MIN
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -36,8 +37,6 @@ class PostgresConfigLoader(ConfigLoader[PostgresConfig]):
 
     @staticmethod
     def _root_validators() -> Iterable[RootPredicate]:
-        # Root validators run against the fully-built dataclass, so they are
-        # independent of which source the value came from.
         return (
             V.root(
                 lambda c: PORT_MIN <= c.port <= PORT_MAX,

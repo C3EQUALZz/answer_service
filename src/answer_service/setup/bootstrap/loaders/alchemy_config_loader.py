@@ -4,7 +4,8 @@ from dature import V, load
 
 from answer_service.setup.bootstrap.loaders.loader import ConfigLoader
 from answer_service.setup.configs.alchemy_config import SQLAlchemyConfig
-from answer_service.setup.configs.consts import (
+
+from .consts import (
     POOL_OVERFLOW_MIN,
     POOL_RECYCLE_MIN,
     POOL_SIZE_MAX,
