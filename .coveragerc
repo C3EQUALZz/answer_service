@@ -12,3 +12,6 @@ skip_covered = True
 exclude_lines =
     pragma: no cover
     pragma: no coverage
+    if TYPE_CHECKING:
+    ^\s*\.\.\.$
+    @(abc\.)?abstractmethod
