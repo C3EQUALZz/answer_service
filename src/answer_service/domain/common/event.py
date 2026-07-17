@@ -17,10 +17,10 @@ class Event:
         if self.event_id:
             return
 
-        object.__setattr__(self, "event_id", event_id)
+        object.__setattr__(self, "event_id", event_id)  # ruff:ignore[unnecessary-dunder-call]
 
     def set_event_date(self, event_date: datetime) -> None:
         if self.event_date:
             return
 
-        object.__setattr__(self, "event_date", event_date)
+        object.__setattr__(self, "event_date", event_date)  # ruff:ignore[unnecessary-dunder-call]

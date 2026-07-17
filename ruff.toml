@@ -30,6 +30,10 @@ ignore = [
 
     "PLC2701",  # private name import `_internal` from external module
 
+    # dishka resolves DI dependencies from runtime type hints, so first-party
+    # types used in constructor annotations must stay importable at runtime.
+    "TC001",
+
     # Assign error message to variable
     "EM101",
     "EM102",
