@@ -44,6 +44,7 @@ dependencies = [
     "polars==1.42.1",
     "python-multipart==0.0.32",
     "sqlalchemy[asyncio]==2.0.51",
+    "structlog==26.1.0",
     "taskiq==0.12.4",
     "taskiq-nats==0.6.0",
     "taskiq-redis==1.2.3",
