@@ -5,12 +5,12 @@ from answer_service.application.common.ports.outbox import (
     OutboxPublisher,
 )
 from answer_service.application.common.ports.task_manager import ProjectEventPayload
-from answer_service.application.common.ports.task_manager.task_id import TaskKey
+from answer_service.application.common.ports.task_manager.task_keys import (
+    OUTBOX_TASK_KEY,
+)
 from answer_service.application.common.ports.task_manager.task_manager import (
     TaskScheduler,
 )
-
-_OUTBOX_TASK_KEY: Final[TaskKey] = TaskKey("outbox")
 
 
 @final
@@ -30,7 +30,7 @@ class TaskSchedulerOutboxPublisher(OutboxPublisher):
 
     @override
     async def publish(self, message: OutboxMessage) -> None:
-        task_id = self._task_scheduler.make_task_id(_OUTBOX_TASK_KEY, message.id)
+        task_id = self._task_scheduler.make_task_id(OUTBOX_TASK_KEY, message.id)
         await self._task_scheduler.schedule(
             task_id,
             ProjectEventPayload(

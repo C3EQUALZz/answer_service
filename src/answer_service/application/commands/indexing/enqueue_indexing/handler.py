@@ -13,15 +13,15 @@ from answer_service.application.common.ports.source_file.source_file_storage imp
     SourceFileStorage,
 )
 from answer_service.application.common.ports.task_manager import RunIndexingPayload
-from answer_service.application.common.ports.task_manager.task_id import TaskKey
+from answer_service.application.common.ports.task_manager.task_keys import (
+    INDEXING_TASK_KEY,
+)
 from answer_service.application.common.ports.task_manager.task_manager import (
     TaskScheduler,
 )
 from answer_service.domain.indexing.factories.indexing_task_factory import (
     IndexingTaskFactory,
 )
-
-_INDEXING_TASK_KEY: Final[TaskKey] = TaskKey("indexing")
 
 
 class EnqueueIndexingHandler(
@@ -60,7 +60,7 @@ class EnqueueIndexingHandler(
         await self._task_gateway.add(task)
 
         background_task_id = self._task_scheduler.make_task_id(
-            _INDEXING_TASK_KEY,
+            INDEXING_TASK_KEY,
             task.id,
         )
         await self._task_scheduler.schedule(

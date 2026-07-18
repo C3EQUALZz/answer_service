@@ -21,7 +21,7 @@ allowed_importers =
     answer_service.application
     answer_service.presentation
     answer_service.setup
-    answer_service.infrastructure.scheduler
+    answer_service.infrastructure.task_manager
 
 
 [importlinter:contract:protected_application_ports]
@@ -33,8 +33,7 @@ allowed_importers =
     answer_service.application
     answer_service.presentation
     answer_service.infrastructure.adapters
-    answer_service.infrastructure.mappers
-    answer_service.infrastructure.scheduler
+    answer_service.infrastructure.task_manager
     answer_service.setup
 
 
@@ -46,14 +45,3 @@ protected_modules =
 allowed_importers =
     answer_service.infrastructure
     answer_service.setup
-
-
-[importlinter:contract:protected_persistence_models]
-name = Persistence models are internal to infrastructure
-type = protected
-protected_modules =
-    answer_service.infrastructure.persistence.models
-allowed_importers =
-    answer_service.infrastructure
-    answer_service.setup
-    answer_service.fastapi_app

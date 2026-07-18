@@ -66,7 +66,13 @@ ignore = [
 # Alembic generates migration filenames with timestamps (e.g. 14_1957_52_...) that start
 # with digits — these are not valid Python identifiers but cannot be renamed.
 # Version subdirs (2026/, 03/) are not Python packages; __init__.py would break mypy.
-"src/answer_service/infrastructure/persistence/migrations/**/*.py" = ["N999", "INP001"]
+# The revision summary comes from the `-m` message via the alembic template, so it
+# is not a sentence (D415).
+"src/answer_service/infrastructure/persistence/migrations/**/*.py" = [
+    "N999",
+    "INP001",
+    "D415",
+]
 # Tests: asserts are the point (S101); fake credentials and magic literals are
 # expected fixture data (S105/S106/S107/PLR2004); object-mother factories take
 # many keyword args (PLR0913); private access is fine in tests (SLF001).

@@ -195,7 +195,7 @@ requires-dist = [
     { name = "polars", specifier = "==1.42.1" },
     { name = "python-multipart", specifier = "==0.0.32" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = "==2.0.51" },
-    { name = "structlog", specifier = ">=26.1.0" },
+    { name = "structlog", specifier = "==26.1.0" },
     { name = "taskiq", specifier = "==0.12.4" },
     { name = "taskiq-nats", specifier = "==0.6.0" },
     { name = "taskiq-redis", specifier = "==1.2.3" },

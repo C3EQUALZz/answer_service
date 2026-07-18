@@ -8,7 +8,7 @@ from answer_service.domain.indexing.value_objects.content_hash import ContentHas
 from answer_service.domain.indexing.value_objects.question import Question
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True)
 class QAContent(ValueObject):
     """The change-tracked payload of a QA pair.
 
