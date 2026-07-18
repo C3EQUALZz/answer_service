@@ -2,7 +2,7 @@
 
 Run with::
 
-    taskiq scheduler answer_service.scheduler_app:scheduler
+    taskiq scheduler answer_service.scheduler_app:create_scheduler_taskiq_app
 """
 
 import logging
@@ -31,6 +31,3 @@ def create_scheduler_taskiq_app() -> TaskiqScheduler:
     worker_broker: AsyncBroker = create_worker_taskiq_app()
     schedule_source: ScheduleSource = setup_schedule_source(configs.redis)
     return setup_scheduler(broker=worker_broker, schedule_source=schedule_source)
-
-
-scheduler: Final[TaskiqScheduler] = create_scheduler_taskiq_app()

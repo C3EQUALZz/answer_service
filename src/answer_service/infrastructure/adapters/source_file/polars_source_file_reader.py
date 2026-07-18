@@ -40,6 +40,10 @@ REQUIRED_COLUMNS: Final[frozenset[str]] = frozenset(
 CSV_SUFFIXES: Final[frozenset[str]] = frozenset({".csv"})
 EXCEL_SUFFIXES: Final[frozenset[str]] = frozenset({".xlsx", ".xls"})
 
+# Modern .xlsx is a zip; legacy .xls is an OLE2 compound document.
+XLSX_MAGIC: Final[bytes] = b"PK\x03\x04"
+XLS_MAGIC: Final[bytes] = b"\xd0\xcf\x11\xe0"
+
 
 @final
 class PolarsSourceFileReader(SourceFileReader):
@@ -63,22 +67,24 @@ class PolarsSourceFileReader(SourceFileReader):
         return [self._to_row(row) for row in frame.iter_rows(named=True)]
 
     def _parse(self, content: bytes, filename: str) -> pl.DataFrame:
-        suffix = Path(filename).suffix.lower()
+        """Chooses the parser by what the bytes are, not what they are called.
 
+        ``read_rows`` runs in the worker, which has only the stored bytes — the
+        original filename never crossed the queue. Sniffing keeps both entry
+        points on the same decision, so a file that validates on upload cannot
+        fail to parse later.
+        """
         try:
-            if suffix in EXCEL_SUFFIXES:
+            if self._is_excel(content):
                 return pl.read_excel(io.BytesIO(content))
-            if suffix in CSV_SUFFIXES or not suffix:
-                return pl.read_csv(io.BytesIO(content))
+            return pl.read_csv(io.BytesIO(content))
         except Exception as e:
             msg = f"'{filename or 'the source file'}' could not be parsed."
             raise UnsupportedSourceFormatError(msg) from e
 
-        msg = (
-            f"'{filename}' is neither a CSV nor an Excel document "
-            f"(expected one of: {', '.join(sorted(CSV_SUFFIXES | EXCEL_SUFFIXES))})."
-        )
-        raise UnsupportedSourceFormatError(msg)
+    @staticmethod
+    def _is_excel(content: bytes) -> bool:
+        return content.startswith((XLSX_MAGIC, XLS_MAGIC))
 
     @staticmethod
     def _ensure_columns(frame: pl.DataFrame, filename: str) -> None:

@@ -2,7 +2,7 @@
 
 Run with::
 
-    taskiq worker answer_service.worker_app:broker
+    taskiq worker answer_service.worker_app:create_worker_taskiq_app
 """
 
 import logging
@@ -69,6 +69,3 @@ def create_worker_taskiq_app() -> AsyncBroker:
     setup_dishka(container, broker=worker_broker)
 
     return worker_broker
-
-
-broker: Final[AsyncBroker] = create_worker_taskiq_app()

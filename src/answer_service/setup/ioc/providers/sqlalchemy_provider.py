@@ -96,7 +96,9 @@ async def get_session(
         AsyncSession: A new async database session
 
     Note:
-        - Automatically handles session cleanup
+        - Closes in a ``finally`` rather than an ``async with``: the generator
+          may be discarded without being resumed, and a context manager wrapped
+          around the yield would then never run its exit
         - Sessions should be used within a single logical operation
         - Transactions should be explicitly committed or rolled back
 
@@ -105,8 +107,10 @@ async def get_session(
             await session.execute(...)
     """
     logger.debug("Starting async session...")
-    async with session_factory() as session:
-        logger.debug("Async session started.")
+    session: AsyncSession = session_factory()
+    try:
         yield session
+    finally:
         logger.debug("Closing async session.")
-    logger.debug("Async session closed.")
+        await session.close()
+        logger.debug("Async session closed.")
