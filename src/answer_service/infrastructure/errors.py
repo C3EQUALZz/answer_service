@@ -15,3 +15,7 @@ class OutboxPublishError(InfrastructureError):
 
 class RepoError(InfrastructureError):
     """Raised when a persistence gateway fails to execute a statement."""
+
+
+class SearchIndexError(InfrastructureError):
+    """Raised when the vector store rejects a read or a write."""
