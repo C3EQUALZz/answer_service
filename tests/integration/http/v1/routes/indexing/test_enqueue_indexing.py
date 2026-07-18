@@ -20,8 +20,8 @@ from answer_service.application.common.ports.task_manager.task_keys import (
 )
 from answer_service.domain.indexing.value_objects.task_id import TaskId
 from answer_service.domain.indexing.value_objects.task_status import IndexingTaskStatus
+from tests.integration.arrange import SourceFileUploader
 from tests.integration.brokers import RecordingBroker
-from tests.integration.http.v1.routes.conftest import SourceFileUploader
 from tests.integration.inject import inject
 from tests.unit.factories.source_file_factories import (
     make_csv_bytes,

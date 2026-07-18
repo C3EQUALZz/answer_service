@@ -18,8 +18,8 @@ from answer_service.application.common.ports.transaction_manager import (
     TransactionManager,
 )
 from answer_service.domain.indexing.value_objects.external_id import ExternalId
+from tests.integration.arrange import PairBuilder, PairStorer
 from tests.integration.inject import inject
-from tests.integration.persistence.conftest import PairBuilder, PairStorer
 from tests.unit.factories.domain_factories import SOURCE_UPDATED_AT, make_qa_content
 
 pytestmark = [

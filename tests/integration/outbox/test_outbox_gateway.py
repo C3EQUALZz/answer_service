@@ -18,8 +18,8 @@ from answer_service.application.common.ports.outbox import (
 from answer_service.application.common.ports.transaction_manager import (
     TransactionManager,
 )
+from tests.integration.arrange import OutboxSeeder
 from tests.integration.inject import inject
-from tests.integration.outbox.conftest import OutboxSeeder
 
 pytestmark = [
     pytest.mark.asyncio(loop_scope="session"),

@@ -12,26 +12,38 @@ truncating is what keeps a test from passing on rows another one left behind.
 """
 
 from collections.abc import AsyncIterator, Iterator
+from datetime import datetime
 from typing import Final
 
 import pytest
 from dishka import AsyncContainer, Scope, make_async_container
 from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI
-from httpx import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient, Response
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 from taskiq import AsyncBroker
 from testcontainers.postgres import PostgresContainer
 
+from answer_service.application.common.mediator.markers import BaseRequest
+from answer_service.application.common.mediator.sender import Sender
 from answer_service.application.common.ports.gateways import (
+    AnalyticsCommandGateway,
     IndexingTaskCommandGateway,
     QACatalogCommandGateway,
 )
-from answer_service.application.common.ports.outbox import OutboxCommandGateway
+from answer_service.application.common.ports.outbox import (
+    OutboxCommandGateway,
+    OutboxMessage,
+)
 from answer_service.application.common.ports.transaction_manager import (
     TransactionManager,
 )
+from answer_service.domain.analytics.value_objects.query_kind import QueryKind
+from answer_service.domain.indexing.entities.indexing_task import IndexingTask
+from answer_service.domain.indexing.entities.qa_pair import QAPair
+from answer_service.domain.indexing.value_objects.external_id import ExternalId
+from answer_service.domain.indexing.value_objects.task_id import TaskId
 from answer_service.infrastructure.persistence.models.base import metadata
 from answer_service.setup.bootstrap.setups.database_setup import setup_map_tables
 from answer_service.setup.bootstrap.setups.http_setup import (
@@ -50,10 +62,27 @@ from answer_service.setup.configs.qdrant_config import QdrantConfig
 from answer_service.setup.configs.redis_config import RedisConfig
 from answer_service.setup.configs.storage_config import StorageConfig
 from answer_service.setup.configs.taskiq_config import TaskIQConfig
+from tests.integration.arrange import (
+    CommandSender,
+    OutboxSeeder,
+    PairBuilder,
+    PairStorer,
+    QueryLogStorer,
+    SourceFileUploader,
+    TaskStorer,
+)
 from tests.integration.brokers import RecordingBroker
 from tests.integration.ioc import test_app_providers
+from tests.unit.factories.domain_factories import (
+    SOURCE_UPDATED_AT,
+    make_events_collection,
+    make_qa_content,
+    make_query_log,
+)
+from tests.unit.factories.outbox_factories import make_outbox_message
 
 POSTGRES_IMAGE: Final[str] = "postgres:16-alpine"
+UPLOAD_URL: Final[str] = "/v1/indexing/upload"
 
 # Session-scoped async fixtures and the tests must share one loop, or the engine
 # is created on a loop that is gone by the time a test uses it.
@@ -220,6 +249,12 @@ async def arrange_catalog(arrange_scope: AsyncContainer) -> QACatalogCommandGate
 
 
 @pytest.fixture()
+async def arrange_analytics(arrange_scope: AsyncContainer) -> AnalyticsCommandGateway:
+    resolved: AnalyticsCommandGateway = await arrange_scope.get(AnalyticsCommandGateway)
+    return resolved
+
+
+@pytest.fixture()
 def dishka_container(container: AsyncContainer) -> AsyncContainer:
     """The container the ``inject`` decorator opens a request scope from.
 
@@ -245,3 +280,131 @@ async def client(app: FastAPI) -> AsyncIterator[AsyncClient]:
         base_url="http://test",
     ) as async_client:
         yield async_client
+
+
+@pytest.fixture()
+def store_outbox_messages(
+    arrange_outbox: OutboxCommandGateway,
+    arrange_transaction: TransactionManager,
+) -> OutboxSeeder:
+    """Commits pending messages before the test reads them.
+
+    Written against the ports, not the container: what a test arranges is
+    "messages exist", and how they get there is the container's business.
+    """
+
+    async def store(count: int) -> list[OutboxMessage]:
+        messages = [make_outbox_message() for _ in range(count)]
+        for message in messages:
+            await arrange_outbox.add(message)
+        await arrange_transaction.commit()
+        return messages
+
+    return store
+
+
+@pytest.fixture()
+def store_indexing_task(
+    arrange_indexing_tasks: IndexingTaskCommandGateway,
+    arrange_transaction: TransactionManager,
+) -> TaskStorer:
+    """Commits a task before the test reads it back."""
+
+    async def store(task: IndexingTask) -> TaskId:
+        await arrange_indexing_tasks.add(task)
+        await arrange_transaction.commit()
+        return task.id
+
+    return store
+
+
+@pytest.fixture()
+def make_pair() -> PairBuilder:
+    """Builds a registered pair with its own events collection."""
+
+    def build(external_id: str, **content: str) -> QAPair:
+        return QAPair.register(
+            external_id=ExternalId(value=external_id),
+            content=make_qa_content(**content),
+            source_updated_at=SOURCE_UPDATED_AT,
+            events_collection=make_events_collection(),
+        )
+
+    return build
+
+
+@pytest.fixture()
+def store_qa_pairs(
+    arrange_catalog: QACatalogCommandGateway,
+    arrange_transaction: TransactionManager,
+) -> PairStorer:
+    async def store(*pairs: QAPair) -> None:
+        for pair in pairs:
+            await arrange_catalog.add(pair)
+        await arrange_transaction.commit()
+
+    return store
+
+
+@pytest.fixture()
+def store_query_log(
+    arrange_analytics: AnalyticsCommandGateway,
+    arrange_transaction: TransactionManager,
+) -> QueryLogStorer:
+    """Records one served query, committed before the test reads it."""
+
+    async def store(
+        text: str = "how do I reset my password?",
+        *,
+        results_count: int = 3,
+        latency_ms: int = 42,
+        occurred_at: datetime | None = None,
+        kind: QueryKind = QueryKind.SEARCH,
+        category: str | None = None,
+    ) -> None:
+        log = make_query_log(
+            text,
+            results_count=results_count,
+            latency_ms=latency_ms,
+            kind=kind,
+            category=category,
+            **({"occurred_at": occurred_at} if occurred_at is not None else {}),
+        )
+        await arrange_analytics.add(log)
+        await arrange_transaction.commit()
+
+    return store
+
+
+@pytest.fixture()
+def upload_source_file(client: AsyncClient) -> SourceFileUploader:
+    """Posts a source file the way a client would."""
+
+    async def upload(
+        content: bytes,
+        filename: str = "faq.csv",
+        content_type: str = "text/csv",
+    ) -> Response:
+        return await client.post(
+            UPLOAD_URL,
+            files={"file": (filename, content, content_type)},
+        )
+
+    return upload
+
+
+@pytest.fixture()
+def send_command(container: AsyncContainer) -> CommandSender:
+    """Dispatches a command the way the worker does: one request scope each.
+
+    A scope per command on purpose — every worker step commits independently,
+    which is what lets a failed sync still record its failure.
+    """
+
+    async def send[TResponse](command: BaseRequest[TResponse]) -> TResponse:
+        async with container(scope=Scope.REQUEST) as request_container:
+            sender: Sender = await request_container.get(Sender)
+            response: TResponse = await sender.send(command)
+            return response
+
+    return send

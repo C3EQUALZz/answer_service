@@ -21,8 +21,8 @@ from answer_service.domain.indexing.value_objects.failure_info import FailureInf
 from answer_service.domain.indexing.value_objects.sync_stats import SyncStats
 from answer_service.domain.indexing.value_objects.task_id import TaskId
 from answer_service.domain.indexing.value_objects.task_status import IndexingTaskStatus
+from tests.integration.arrange import TaskStorer
 from tests.integration.inject import inject
-from tests.integration.persistence.conftest import TaskStorer
 from tests.unit.factories.domain_factories import make_queued_indexing_task
 
 pytestmark = [
