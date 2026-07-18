@@ -12,12 +12,14 @@ from answer_service.application.common.ports.gateways import (
     QueryFrequency,
     QueryStatistics,
 )
+from answer_service.application.common.query_params.sorting import SortingOrder
 from answer_service.infrastructure.errors import RepoError
 from answer_service.infrastructure.persistence.models import query_logs_table
 
 if TYPE_CHECKING:
     from sqlalchemy.sql.elements import ColumnElement
 
+    from answer_service.application.common.query_params.pagination import Pagination
     from answer_service.domain.analytics.entities.query_log import QueryLog
     from answer_service.domain.analytics.value_objects.period import Period
 
@@ -70,10 +72,11 @@ class SqlAlchemyAnalyticsGateway(AnalyticsCommandGateway, AnalyticsQueryGateway)
     async def read_unanswered_queries(
         self,
         period: Period,
-        limit: int,
+        pagination: Pagination,
+        sorting_order: SortingOrder,
     ) -> Sequence[QueryFrequency]:
         return await self._read_frequencies(
-            self._frequency_stmt(period, limit).where(
+            self._frequency_stmt(period, pagination, sorting_order).where(
                 query_logs_table.c.results_count == UNANSWERED,
             ),
             "Failed to read unanswered queries.",
@@ -83,10 +86,11 @@ class SqlAlchemyAnalyticsGateway(AnalyticsCommandGateway, AnalyticsQueryGateway)
     async def read_popular_queries(
         self,
         period: Period,
-        limit: int,
+        pagination: Pagination,
+        sorting_order: SortingOrder,
     ) -> Sequence[QueryFrequency]:
         return await self._read_frequencies(
-            self._frequency_stmt(period, limit),
+            self._frequency_stmt(period, pagination, sorting_order),
             "Failed to read popular queries.",
         )
 
@@ -108,14 +112,24 @@ class SqlAlchemyAnalyticsGateway(AnalyticsCommandGateway, AnalyticsQueryGateway)
         ]
 
     @staticmethod
-    def _frequency_stmt(period: Period, limit: int) -> Select[tuple[object, int]]:
+    def _frequency_stmt(
+        period: Period,
+        pagination: Pagination,
+        sorting_order: SortingOrder,
+    ) -> Select[tuple[object, int]]:
         occurrences = func.count().label("occurrences")
+        ordering = (
+            occurrences.asc() if sorting_order is SortingOrder.ASC else occurrences.desc()
+        )
         return (
             select(query_logs_table.c.text, occurrences)
             .where(SqlAlchemyAnalyticsGateway._within(period))
             .group_by(query_logs_table.c.text)
-            .order_by(occurrences.desc())
-            .limit(limit)
+            # Ties on the count would otherwise page unstably: the same row
+            # could appear on two pages, or on none.
+            .order_by(ordering, query_logs_table.c.text.asc())
+            .limit(pagination.limit)
+            .offset(pagination.offset)
         )
 
     @staticmethod

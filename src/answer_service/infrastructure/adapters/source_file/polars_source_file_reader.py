@@ -2,7 +2,6 @@ import asyncio
 import io
 import logging
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import TYPE_CHECKING, Final, final, override
 
 import polars as pl
@@ -88,7 +87,25 @@ class PolarsSourceFileReader(SourceFileReader):
 
     @staticmethod
     def _ensure_columns(frame: pl.DataFrame, filename: str) -> None:
-        missing = REQUIRED_COLUMNS - set(frame.columns)
+        """Separates 'wrong file' from 'right file, wrong columns'.
+
+        Anything textual parses as a one-column CSV, so a PDF or a stray text
+        file reaches here as a frame with no recognisable columns. Reporting
+        that as five missing columns tells the user to edit a file they never
+        meant to send; telling them it is not a source file at all is the
+        actionable message.
+        """
+        columns = set(frame.columns)
+        missing = REQUIRED_COLUMNS - columns
+
+        if missing == REQUIRED_COLUMNS:
+            msg = (
+                f"'{filename or 'the source file'}' does not look like a "
+                f"question-answer source file: none of the expected columns "
+                f"({', '.join(sorted(REQUIRED_COLUMNS))}) are present."
+            )
+            raise UnsupportedSourceFormatError(msg)
+
         if missing:
             msg = (
                 f"'{filename or 'the source file'}' is missing required "

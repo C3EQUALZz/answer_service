@@ -7,6 +7,8 @@ from answer_service.application.common.ports.gateways import (
     QueryFrequency,
     QueryStatistics,
 )
+from answer_service.application.common.query_params.pagination import Pagination
+from answer_service.application.common.query_params.sorting import SortingOrder
 from answer_service.domain.analytics.value_objects.period import Period
 
 DEFAULT_PERIOD_DAYS: Final[int] = 30
@@ -33,4 +35,7 @@ class GetStatisticsQuery(Query[StatisticsResponse]):
     """
 
     period: Period = field(default_factory=lambda: Period.last_days(DEFAULT_PERIOD_DAYS))
-    popular_limit: int = DEFAULT_POPULAR_LIMIT
+    popular_pagination: Pagination = field(
+        default_factory=lambda: Pagination(limit=DEFAULT_POPULAR_LIMIT),
+    )
+    sorting_order: SortingOrder = SortingOrder.DESC

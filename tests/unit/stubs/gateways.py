@@ -27,6 +27,8 @@ from answer_service.application.common.ports.outbox import (
     OutboxCommandGateway,
     OutboxMessage,
 )
+from answer_service.application.common.query_params.pagination import Pagination
+from answer_service.application.common.query_params.sorting import SortingOrder
 from answer_service.domain.analytics.entities.query_log import QueryLog
 from answer_service.domain.analytics.value_objects.period import Period
 from answer_service.domain.indexing.entities.indexing_task import IndexingTask
@@ -159,30 +161,50 @@ class InMemoryAnalytics(AnalyticsCommandGateway, AnalyticsQueryGateway):
     async def read_unanswered_queries(
         self,
         period: Period,
-        limit: int,
+        pagination: Pagination,
+        sorting_order: SortingOrder,
     ) -> Sequence[QueryFrequency]:
         return self._rank(
             [log for log in self._within(period) if log.is_unanswered],
-            limit,
+            pagination,
+            sorting_order,
         )
 
     @override
     async def read_popular_queries(
         self,
         period: Period,
-        limit: int,
+        pagination: Pagination,
+        sorting_order: SortingOrder,
     ) -> Sequence[QueryFrequency]:
-        return self._rank(self._within(period), limit)
+        return self._rank(self._within(period), pagination, sorting_order)
 
     def _within(self, period: Period) -> list[QueryLog]:
         return [log for log in self.logs if period.contains(log.occurred_at)]
 
     @staticmethod
-    def _rank(logs: list[QueryLog], limit: int) -> Sequence[QueryFrequency]:
+    def _rank(
+        logs: list[QueryLog],
+        pagination: Pagination,
+        sorting_order: SortingOrder,
+    ) -> Sequence[QueryFrequency]:
         counts = Counter(log.text.content for log in logs)
+        # Ties broken by text, mirroring the SQL gateway — otherwise paging
+        # through the report could repeat or skip a row.
+        ranked = sorted(
+            counts.items(),
+            key=lambda item: (
+                item[1] if sorting_order is SortingOrder.ASC else -item[1],
+                item[0],
+            ),
+        )
+        offset = pagination.offset or 0
+        window = ranked[offset:]
+        if pagination.limit is not None:
+            window = window[: pagination.limit]
         return [
             QueryFrequency(text=text, occurrences=occurrences)
-            for text, occurrences in counts.most_common(limit)
+            for text, occurrences in window
         ]
 
 

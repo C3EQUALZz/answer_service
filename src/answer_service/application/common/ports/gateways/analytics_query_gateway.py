@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Protocol
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from answer_service.application.common.query_params.pagination import Pagination
+    from answer_service.application.common.query_params.sorting import SortingOrder
     from answer_service.domain.analytics.value_objects.period import Period
 
 
@@ -51,16 +53,23 @@ class AnalyticsQueryGateway(Protocol):
     async def read_unanswered_queries(
         self,
         period: Period,
-        limit: int,
+        pagination: Pagination,
+        sorting_order: SortingOrder,
     ) -> Sequence[QueryFrequency]:
-        """Most frequent queries that returned nothing, most frequent first."""
+        """Queries that returned nothing, ranked by how often they were asked.
+
+        Paginated because the gap report is a backlog someone works through:
+        the second page is the next batch of FAQ entries to write, not a rerun
+        of the first.
+        """
         raise NotImplementedError
 
     @abstractmethod
     async def read_popular_queries(
         self,
         period: Period,
-        limit: int,
+        pagination: Pagination,
+        sorting_order: SortingOrder,
     ) -> Sequence[QueryFrequency]:
-        """Most frequent queries overall, most frequent first."""
+        """Queries overall, ranked by how often they were asked."""
         raise NotImplementedError

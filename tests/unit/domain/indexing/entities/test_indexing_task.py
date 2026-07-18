@@ -1,53 +1,35 @@
-from collections import deque
-
 import pytest
 
-from answer_service.domain.common.events_collection import EventsCollection
-from answer_service.domain.indexing.entities.indexing_task import IndexingTask
 from answer_service.domain.indexing.errors import InvalidTaskTransitionError
 from answer_service.domain.indexing.value_objects.failure_info import FailureInfo
-from answer_service.domain.indexing.value_objects.source_reference import SourceReference
 from answer_service.domain.indexing.value_objects.sync_stats import SyncStats
 from answer_service.domain.indexing.value_objects.task_status import IndexingTaskStatus
-from tests.unit.factories.domain_factories import make_task_id
-
-
-def make_task() -> tuple[IndexingTask, EventsCollection]:
-    collection = EventsCollection(events=deque())
-    task = IndexingTask.queue(
-        task_id=make_task_id(),
-        source=SourceReference(value="uploads/faq.csv"),
-        events_collection=collection,
-    )
-    return task, collection
-
-
-def emitted(collection: EventsCollection) -> list[str]:
-    return [type(event).__name__ for event in collection.pull_events()]
+from tests.unit.factories.domain_factories import make_queued_indexing_task
+from tests.unit.support import emitted_event_names
 
 
 def test_a_queued_task_records_its_arrival() -> None:
-    task, collection = make_task()
+    task, collection = make_queued_indexing_task()
 
     assert task.status is IndexingTaskStatus.QUEUED
     assert task.started_at is None
     assert task.stats.total == 0
-    assert emitted(collection) == ["IndexingTaskQueued"]
+    assert emitted_event_names(collection) == ["IndexingTaskQueued"]
 
 
 def test_starting_moves_to_running_and_stamps_the_time() -> None:
-    task, collection = make_task()
-    emitted(collection)
+    task, collection = make_queued_indexing_task()
+    emitted_event_names(collection)
 
     task.start()
 
     assert task.status is IndexingTaskStatus.RUNNING
     assert task.started_at is not None
-    assert emitted(collection) == ["IndexingStarted"]
+    assert emitted_event_names(collection) == ["IndexingStarted"]
 
 
 def test_completing_records_the_stats() -> None:
-    task, _ = make_task()
+    task, _ = make_queued_indexing_task()
     task.start()
     stats = SyncStats(created=3, updated=1, deleted=0, skipped=7)
 
@@ -60,7 +42,7 @@ def test_completing_records_the_stats() -> None:
 
 def test_a_task_cannot_start_twice() -> None:
     """The worker's message is redelivered; the aggregate must hold the line."""
-    task, _ = make_task()
+    task, _ = make_queued_indexing_task()
     task.start()
 
     with pytest.raises(InvalidTaskTransitionError):
@@ -69,14 +51,14 @@ def test_a_task_cannot_start_twice() -> None:
 
 def test_a_queued_task_cannot_be_completed() -> None:
     """Completing work that never started would report stats nobody produced."""
-    task, _ = make_task()
+    task, _ = make_queued_indexing_task()
 
     with pytest.raises(InvalidTaskTransitionError):
         task.complete(SyncStats.empty())
 
 
 def test_a_finished_task_cannot_be_completed_again() -> None:
-    task, _ = make_task()
+    task, _ = make_queued_indexing_task()
     task.start()
     task.complete(SyncStats.empty())
 
@@ -87,7 +69,7 @@ def test_a_finished_task_cannot_be_completed_again() -> None:
 @pytest.mark.parametrize("started", (True, False))
 def test_a_task_can_fail_from_any_non_terminal_state(*, started: bool) -> None:
     """A crash before the work began still has to be recorded."""
-    task, _ = make_task()
+    task, _ = make_queued_indexing_task()
     if started:
         task.start()
 
@@ -100,7 +82,7 @@ def test_a_task_can_fail_from_any_non_terminal_state(*, started: bool) -> None:
 
 @pytest.mark.parametrize("terminal_call", ("complete", "fail"))
 def test_a_terminal_task_cannot_fail(terminal_call: str) -> None:
-    task, _ = make_task()
+    task, _ = make_queued_indexing_task()
     task.start()
     if terminal_call == "complete":
         task.complete(SyncStats.empty())
@@ -112,11 +94,11 @@ def test_a_terminal_task_cannot_fail(terminal_call: str) -> None:
 
 
 def test_the_full_lifecycle_emits_its_events_in_order() -> None:
-    task, collection = make_task()
+    task, collection = make_queued_indexing_task()
     task.start()
     task.complete(SyncStats.empty())
 
-    assert emitted(collection) == [
+    assert emitted_event_names(collection) == [
         "IndexingTaskQueued",
         "IndexingStarted",
         "IndexingCompleted",

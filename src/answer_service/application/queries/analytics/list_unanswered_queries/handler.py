@@ -24,12 +24,16 @@ class ListUnansweredQueriesHandler(
         self,
         query: ListUnansweredQueriesQuery,
     ) -> UnansweredQueriesResponse:
-        if not 1 <= query.limit <= MAX_LIMIT:
-            msg = f"limit must be between 1 and {MAX_LIMIT}, got {query.limit}."
+        # ``Pagination`` already rejects a non-positive limit; the ceiling is
+        # this endpoint's own, so one caller cannot ask for the whole log.
+        limit = query.pagination.limit
+        if limit is not None and limit > MAX_LIMIT:
+            msg = f"limit must not exceed {MAX_LIMIT}, got {limit}."
             raise PaginationError(msg)
 
         queries = await self._analytics_query.read_unanswered_queries(
             query.period,
-            query.limit,
+            query.pagination,
+            query.sorting_order,
         )
         return UnansweredQueriesResponse(period=query.period, queries=tuple(queries))

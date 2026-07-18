@@ -8,6 +8,8 @@ from answer_service.application.commands.analytics.record_query.command import (
 from answer_service.application.commands.analytics.record_query.handler import (
     RecordQueryHandler,
 )
+from answer_service.application.common.query_params.pagination import Pagination
+from answer_service.application.common.query_params.sorting import SortingOrder
 from answer_service.application.error import PaginationError
 from answer_service.application.queries.analytics.get_statistics.handler import (
     GetStatisticsHandler,
@@ -16,6 +18,7 @@ from answer_service.application.queries.analytics.get_statistics.query import (
     GetStatisticsQuery,
 )
 from answer_service.application.queries.analytics.list_unanswered_queries.handler import (
+    MAX_LIMIT,
     ListUnansweredQueriesHandler,
 )
 from answer_service.application.queries.analytics.list_unanswered_queries.query import (
@@ -201,21 +204,82 @@ async def test_unanswered_report_honours_its_limit(
     )
 
     response = await list_unanswered_handler.handle(
-        ListUnansweredQueriesQuery(period=WINDOW, limit=2),
+        ListUnansweredQueriesQuery(
+            period=WINDOW,
+            pagination=Pagination(limit=2),
+        ),
     )
 
     assert len(response.queries) == 2
 
 
-@pytest.mark.parametrize("limit", (0, -1, 201))
-async def test_an_out_of_range_limit_is_rejected(
-    limit: int,
+@pytest.mark.parametrize("limit", (0, -1))
+def test_a_non_positive_limit_is_rejected_by_pagination(limit: int) -> None:
+    """Caught at construction, so a bad page size never reaches a gateway."""
+    with pytest.raises(PaginationError):
+        Pagination(limit=limit)
+
+
+def test_a_negative_offset_is_rejected_by_pagination() -> None:
+    with pytest.raises(PaginationError):
+        Pagination(offset=-1)
+
+
+async def test_a_limit_above_the_ceiling_is_rejected(
     list_unanswered_handler: ListUnansweredQueriesHandler,
 ) -> None:
-    with pytest.raises(PaginationError):
+    """The ceiling stops one caller from pulling the whole query log."""
+    with pytest.raises(PaginationError, match="200"):
         await list_unanswered_handler.handle(
-            ListUnansweredQueriesQuery(period=WINDOW, limit=limit),
+            ListUnansweredQueriesQuery(
+                period=WINDOW,
+                pagination=Pagination(limit=MAX_LIMIT + 1),
+            ),
         )
+
+
+async def test_the_backlog_can_be_paged_through(
+    list_unanswered_handler: ListUnansweredQueriesHandler,
+    analytics: InMemoryAnalytics,
+) -> None:
+    """The gap report is a backlog: page two must continue, not repeat page one."""
+    analytics.logs.extend(
+        make_query_log(f"gap-{index}", results_count=0) for index in range(5)
+    )
+
+    first = await list_unanswered_handler.handle(
+        ListUnansweredQueriesQuery(period=WINDOW, pagination=Pagination(limit=2)),
+    )
+    second = await list_unanswered_handler.handle(
+        ListUnansweredQueriesQuery(
+            period=WINDOW,
+            pagination=Pagination(limit=2, offset=2),
+        ),
+    )
+
+    first_texts = [query.text for query in first.queries]
+    second_texts = [query.text for query in second.queries]
+    assert len(first_texts) == len(second_texts) == 2
+    assert set(first_texts).isdisjoint(second_texts)
+
+
+async def test_ascending_order_surfaces_the_rarest_gaps_first(
+    list_unanswered_handler: ListUnansweredQueriesHandler,
+    analytics: InMemoryAnalytics,
+) -> None:
+    analytics.logs.extend(
+        [
+            make_query_log("asked once", results_count=0),
+            make_query_log("asked twice", results_count=0),
+            make_query_log("asked twice", results_count=0),
+        ],
+    )
+
+    response = await list_unanswered_handler.handle(
+        ListUnansweredQueriesQuery(period=WINDOW, sorting_order=SortingOrder.ASC),
+    )
+
+    assert [query.text for query in response.queries] == ["asked once", "asked twice"]
 
 
 def test_a_period_cannot_end_before_it_starts() -> None:

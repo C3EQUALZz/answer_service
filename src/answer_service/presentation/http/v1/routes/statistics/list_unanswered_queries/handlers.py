@@ -5,6 +5,8 @@ from dishka.integrations.fastapi import DishkaRoute
 from fastapi import APIRouter, Query, status
 
 from answer_service.application.common.mediator.sender import Sender
+from answer_service.application.common.query_params.pagination import Pagination
+from answer_service.application.common.query_params.sorting import SortingOrder
 from answer_service.application.queries.analytics.list_unanswered_queries.query import (
     ListUnansweredQueriesQuery,
 )
@@ -40,6 +42,12 @@ LimitQuery = Query(
     le=MAX_LIMIT,
 )
 
+OffsetQuery = Query(
+    title="Offset",
+    description="How many entries of the backlog to skip",
+    ge=0,
+)
+
 
 @list_unanswered_queries_router.get(
     "/unanswered",
@@ -52,9 +60,15 @@ async def list_unanswered_queries_handler(
     sender: FromDishka[Sender],
     days: Annotated[int, DaysQuery] = DEFAULT_DAYS,
     limit: Annotated[int, LimitQuery] = DEFAULT_LIMIT,
+    offset: Annotated[int, OffsetQuery] = 0,
+    sorting_order: SortingOrder = SortingOrder.DESC,
 ) -> UnansweredQueriesSchemaResponse:
     """The actionable half of the report: each entry is an FAQ entry to write."""
     response = await sender.send(
-        ListUnansweredQueriesQuery(period=Period.last_days(days), limit=limit),
+        ListUnansweredQueriesQuery(
+            period=Period.last_days(days),
+            pagination=Pagination(limit=limit, offset=offset),
+            sorting_order=sorting_order,
+        ),
     )
     return UnansweredQueriesSchemaResponse.of(response)

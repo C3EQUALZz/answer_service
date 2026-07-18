@@ -33,7 +33,8 @@ class GetStatisticsHandler(QueryHandler[GetStatisticsQuery, StatisticsResponse])
         queries = await self._analytics_query.read_statistics(query.period)
         popular = await self._analytics_query.read_popular_queries(
             query.period,
-            query.popular_limit,
+            query.popular_pagination,
+            query.sorting_order,
         )
 
         return StatisticsResponse(

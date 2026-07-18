@@ -12,13 +12,19 @@ from answer_service.domain.indexing.errors import (
     NegativeSyncCountError,
     QuestionTooLongError,
 )
-from answer_service.domain.indexing.value_objects.answer import Answer
+from answer_service.domain.indexing.value_objects.answer import (
+    MAX_ANSWER_LENGTH,
+    Answer,
+)
 from answer_service.domain.indexing.value_objects.category import Category
 from answer_service.domain.indexing.value_objects.content_hash import ContentHash
 from answer_service.domain.indexing.value_objects.external_id import ExternalId
 from answer_service.domain.indexing.value_objects.failure_info import FailureInfo
 from answer_service.domain.indexing.value_objects.qa_content import QAContent
-from answer_service.domain.indexing.value_objects.question import Question
+from answer_service.domain.indexing.value_objects.question import (
+    MAX_QUESTION_LENGTH,
+    Question,
+)
 from answer_service.domain.indexing.value_objects.source_reference import SourceReference
 from answer_service.domain.indexing.value_objects.sync_stats import SyncStats
 from answer_service.domain.indexing.value_objects.task_status import IndexingTaskStatus
@@ -40,11 +46,6 @@ def test_blank_strings_are_rejected_everywhere(blank: str) -> None:
 
 
 def test_overlong_text_is_rejected() -> None:
-    from answer_service.domain.indexing.value_objects.answer import MAX_ANSWER_LENGTH
-    from answer_service.domain.indexing.value_objects.question import (
-        MAX_QUESTION_LENGTH,
-    )
-
     with pytest.raises(QuestionTooLongError):
         Question(content="q" * (MAX_QUESTION_LENGTH + 1))
     with pytest.raises(AnswerTooLongError):

@@ -12,6 +12,8 @@ from datetime import UTC, datetime
 from typing import Any, final, override
 from uuid import UUID, uuid4
 
+from taskiq import ScheduleSource, ScheduledTask
+
 from answer_service.application.common.ports.outbox import (
     EventBus,
     EventSerializer,
@@ -168,3 +170,12 @@ class StubQueryLogIdGenerator:
 
     def __call__(self) -> QueryLogId:
         return QueryLogId(uuid4())
+
+
+@final
+class StubScheduleSource(ScheduleSource):
+    """A schedule source the scheduler holds but these tests never exercise."""
+
+    @override
+    async def get_schedules(self) -> list[ScheduledTask]:
+        return []

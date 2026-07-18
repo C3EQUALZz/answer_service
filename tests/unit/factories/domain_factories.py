@@ -4,6 +4,7 @@ Every builder takes only the fields a test actually cares about and fills the
 rest with valid defaults, so a test reads as the one thing it is varying.
 """
 
+from collections import deque
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -17,15 +18,20 @@ from answer_service.domain.analytics.value_objects.query_log_id import QueryLogI
 from answer_service.domain.analytics.value_objects.query_outcome import QueryOutcome
 from answer_service.domain.analytics.value_objects.query_text import QueryText
 from answer_service.domain.common.events_collection import EventsCollection
+from answer_service.domain.indexing.entities.indexing_task import IndexingTask
 from answer_service.domain.indexing.entities.qa_pair import QAPair
 from answer_service.domain.indexing.value_objects.answer import Answer
 from answer_service.domain.indexing.value_objects.category import Category
+from answer_service.domain.indexing.value_objects.content_hash import ContentHash
+from answer_service.domain.indexing.value_objects.desired_pair import DesiredPair
 from answer_service.domain.indexing.value_objects.external_id import ExternalId
 from answer_service.domain.indexing.value_objects.qa_content import QAContent
 from answer_service.domain.indexing.value_objects.question import Question
 from answer_service.domain.indexing.value_objects.source_reference import SourceReference
 from answer_service.domain.indexing.value_objects.task_id import TaskId
 from answer_service.domain.indexing.value_objects.task_status import IndexingTaskStatus
+from answer_service.domain.search.value_objects.score import Score
+from answer_service.domain.search.value_objects.scored_candidate import ScoredCandidate
 
 SOURCE_UPDATED_AT = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)
 
@@ -120,3 +126,56 @@ def make_indexing_task_view(
         failure_code=None,
         failure_message=None,
     )
+
+
+def make_events_collection() -> EventsCollection:
+    return EventsCollection(events=deque())
+
+
+def make_registered_qa_pair(
+    external_id: str = "q-1",
+    content: QAContent | None = None,
+) -> tuple[QAPair, EventsCollection]:
+    """A freshly registered pair together with the collection it reports to."""
+    collection = make_events_collection()
+    pair = QAPair.register(
+        external_id=ExternalId(value=external_id),
+        content=content if content is not None else make_qa_content(),
+        source_updated_at=SOURCE_UPDATED_AT,
+        events_collection=collection,
+    )
+    return pair, collection
+
+
+def make_queued_indexing_task(
+    source: str = "uploads/faq.csv",
+) -> tuple[IndexingTask, EventsCollection]:
+    """A queued task together with the collection it reports to."""
+    collection = make_events_collection()
+    task = IndexingTask.queue(
+        task_id=make_task_id(),
+        source=SourceReference(value=source),
+        events_collection=collection,
+    )
+    return task, collection
+
+
+def make_desired_pair(external_id: str, answer: str = "A.") -> DesiredPair:
+    return DesiredPair(
+        external_id=ExternalId(value=external_id),
+        content=make_qa_content(answer=answer),
+        source_updated_at=SOURCE_UPDATED_AT,
+    )
+
+
+def make_manifest(*pairs: DesiredPair) -> dict[ExternalId, ContentHash]:
+    """The catalog fingerprints the planner diffs against."""
+    return {pair.external_id: pair.fingerprint for pair in pairs}
+
+
+def make_scored_candidates(*specs: tuple[str, float]) -> list[ScoredCandidate]:
+    """Candidates as a retriever returns them: already ordered, best first."""
+    return [
+        ScoredCandidate(external_id=ExternalId(value=eid), score=Score(value=score))
+        for eid, score in specs
+    ]

@@ -32,6 +32,22 @@ class RrfFusion(BaseDomainService):
     def __init__(self, k: int = DEFAULT_RRF_K) -> None:
         self._k: Final[int] = k
 
+    @staticmethod
+    def _best_positions(
+        candidates: Sequence[ScoredCandidate],
+    ) -> dict[ExternalId, tuple[int, Score]]:
+        """Indexes candidates by id, keeping the first occurrence of each.
+
+        A retriever should not repeat a candidate, but if it does, the earlier
+        position is the one it ranked higher — taking the later one would
+        penalise a result for having been returned twice.
+        """
+        positions: dict[ExternalId, tuple[int, Score]] = {}
+        for position, candidate in enumerate(candidates):
+            if candidate.external_id not in positions:
+                positions[candidate.external_id] = (position, candidate.score)
+        return positions
+
     def fuse(
         self,
         *,
@@ -39,12 +55,8 @@ class RrfFusion(BaseDomainService):
         lexical: Sequence[ScoredCandidate],
         top_k: TopK,
     ) -> tuple[RankedResult, ...]:
-        dense_by_id = {
-            c.external_id: (position, c.score) for position, c in enumerate(dense)
-        }
-        lexical_by_id = {
-            c.external_id: (position, c.score) for position, c in enumerate(lexical)
-        }
+        dense_by_id = self._best_positions(dense)
+        lexical_by_id = self._best_positions(lexical)
 
         fused: list[tuple[ExternalId, Scores]] = []
         for external_id in dense_by_id.keys() | lexical_by_id.keys():
