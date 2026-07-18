@@ -79,6 +79,7 @@ def ensure_collection(
 
 def create_qdrant_vectorstore(
     qdrant_config: QdrantConfig,
+    mistral_config: MistralConfig,
     qdrant_client: QdrantClient,
     embedding_function: Embeddings,
 ) -> QdrantVectorStore:
@@ -87,7 +88,13 @@ def create_qdrant_vectorstore(
     Both sides take the same instance on purpose: it carries the embedding
     model, and two independently configured stores could drift onto different
     models, which produces silently poor results rather than an error.
+
+    Ensures the collection first: the store validates it on construction, so
+    without this a fresh deployment could not start. Constructing it does reach
+    the server, which means the process refuses to start while Qdrant is
+    unreachable — deliberate, since every write path depends on it.
     """
+    ensure_collection(qdrant_client, qdrant_config, mistral_config)
     return QdrantVectorStore(
         client=qdrant_client,
         collection_name=qdrant_config.collection_name,

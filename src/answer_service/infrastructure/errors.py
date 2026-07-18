@@ -23,3 +23,7 @@ class SearchIndexError(InfrastructureError):
 
 class HandlerNotFoundError(InfrastructureError):
     """Raised when a request reaches the mediator with no handler registered."""
+
+
+class SourceFileStorageError(InfrastructureError):
+    """Raised when a staged source file cannot be written or read back."""
