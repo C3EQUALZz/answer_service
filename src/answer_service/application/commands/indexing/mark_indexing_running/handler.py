@@ -6,9 +6,17 @@ from answer_service.application.commands.indexing.mark_indexing_running.command 
 from answer_service.application.common.mediator.handlers import CommandHandler
 from answer_service.application.common.ports.gateways import IndexingTaskCommandGateway
 from answer_service.application.error import IndexingTaskNotFoundError
+from answer_service.domain.indexing.value_objects.task_status import IndexingTaskStatus
 
 
 class MarkIndexingRunningHandler(CommandHandler[MarkIndexingRunningCommand, None]):
+    """Fixes the ``RUNNING`` state of a queued task before the heavy sync starts.
+
+    Tolerates a task that is no longer ``QUEUED``: the worker's message is
+    delivered at least once, and a redelivery must not fail on a state machine
+    that has already moved on. Only a genuinely queued task is transitioned.
+    """
+
     def __init__(self, task_gateway: IndexingTaskCommandGateway) -> None:
         self._task_gateway: Final[IndexingTaskCommandGateway] = task_gateway
 
@@ -18,6 +26,9 @@ class MarkIndexingRunningHandler(CommandHandler[MarkIndexingRunningCommand, None
         if task is None:
             msg = f"Indexing task '{command.task_id}' not found."
             raise IndexingTaskNotFoundError(msg)
+
+        if task.status is not IndexingTaskStatus.QUEUED:
+            return
 
         task.start()
         await self._task_gateway.update(task)
