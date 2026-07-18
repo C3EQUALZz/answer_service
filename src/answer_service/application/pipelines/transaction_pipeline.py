@@ -8,6 +8,7 @@ from answer_service.application.common.mediator.markers import Command
 from answer_service.application.common.ports.transaction_manager import (
     TransactionManager,
 )
+from answer_service.domain.common.error import AppError
 
 
 class TransactionPipeline[TCommand: Command[Any], TResponse](
@@ -30,7 +31,7 @@ class TransactionPipeline[TCommand: Command[Any], TResponse](
     ) -> TResponse:
         try:
             response = await handle_next(request)
-        except Exception:
+        except AppError:
             await self._transaction_manager.rollback()
             raise
 
