@@ -1,11 +1,12 @@
 import logging
 from typing import Final, override
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from answer_service.application.common.ports.gateways import (
+    CatalogStatistics,
     QACatalogCommandGateway,
     QACatalogQueryGateway,
 )
@@ -97,6 +98,29 @@ class SqlAlchemyQACatalogGateway(QACatalogCommandGateway, QACatalogQueryGateway)
             )
             for row in rows
         }
+
+    @override
+    async def read_statistics(self) -> CatalogStatistics:
+        """Counts in the database, not by loading the catalog."""
+        total_stmt = select(func.count()).select_from(qa_pairs_table)
+        per_category_stmt = select(
+            qa_pairs_table.c.category,
+            func.count().label("pairs"),
+        ).group_by(qa_pairs_table.c.category)
+
+        try:
+            total = (await self._session.execute(total_stmt)).scalar_one()
+            rows = (await self._session.execute(per_category_stmt)).all()
+        except SQLAlchemyError as e:
+            msg = "Failed to read the catalog statistics."
+            raise RepoError(msg) from e
+
+        # The category column carries a value object type, so it comes back as
+        # ``Category`` rather than a plain string.
+        return CatalogStatistics(
+            total_pairs=total,
+            pairs_per_category={row.category.value: row.pairs for row in rows},
+        )
 
     def _inject(self, pair: QAPair) -> QAPair:
         pair.events_collection = self._events_collection

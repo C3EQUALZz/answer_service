@@ -4,6 +4,7 @@ from answer_service.infrastructure.persistence.models import (
     map_indexing_tasks_table,
     map_outbox_table,
     map_qa_pairs_table,
+    map_query_logs_table,
 )
 
 
@@ -37,3 +38,4 @@ def setup_map_tables() -> None:
     map_qa_pairs_table()
     map_indexing_tasks_table()
     map_outbox_table()
+    map_query_logs_table()

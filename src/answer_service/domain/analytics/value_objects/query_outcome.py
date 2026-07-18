@@ -5,7 +5,7 @@ from answer_service.domain.analytics.errors import NegativeResultsCountError
 from answer_service.domain.common.value_object import ValueObject
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True)
 class QueryOutcome(ValueObject):
     """What a query actually produced.
 

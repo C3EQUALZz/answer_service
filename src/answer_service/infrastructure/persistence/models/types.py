@@ -1,9 +1,13 @@
 from typing import Any, override
 
-from sqlalchemy import Text, TypeDecorator
+from sqlalchemy import Integer, Text, TypeDecorator
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Dialect
 
+from answer_service.domain.analytics.value_objects.category_label import CategoryLabel
+from answer_service.domain.analytics.value_objects.latency import Latency
+from answer_service.domain.analytics.value_objects.query_kind import QueryKind
+from answer_service.domain.analytics.value_objects.query_text import QueryText
 from answer_service.domain.indexing.value_objects.answer import Answer
 from answer_service.domain.indexing.value_objects.category import Category
 from answer_service.domain.indexing.value_objects.external_id import ExternalId
@@ -207,3 +211,95 @@ class IndexingTaskStatusType(TypeDecorator[IndexingTaskStatus]):
         dialect: Dialect,
     ) -> IndexingTaskStatus | None:
         return IndexingTaskStatus(value) if value is not None else None
+
+
+class QueryTextType(TypeDecorator[QueryText]):
+    """Persists the recorded query text as plain TEXT."""
+
+    impl = Text
+    cache_ok = True
+
+    @override
+    def process_bind_param(
+        self,
+        value: QueryText | None,
+        dialect: Dialect,
+    ) -> str | None:
+        return value.content if value is not None else None
+
+    @override
+    def process_result_value(
+        self,
+        value: str | None,
+        dialect: Dialect,
+    ) -> QueryText | None:
+        return QueryText(content=value) if value is not None else None
+
+
+class CategoryLabelType(TypeDecorator[CategoryLabel]):
+    """Persists the recorded category as plain TEXT; NULL when unfiltered."""
+
+    impl = Text
+    cache_ok = True
+
+    @override
+    def process_bind_param(
+        self,
+        value: CategoryLabel | None,
+        dialect: Dialect,
+    ) -> str | None:
+        return value.value if value is not None else None
+
+    @override
+    def process_result_value(
+        self,
+        value: str | None,
+        dialect: Dialect,
+    ) -> CategoryLabel | None:
+        return CategoryLabel(value=value) if value is not None else None
+
+
+class QueryKindType(TypeDecorator[QueryKind]):
+    """Persists which entry point served the query, as its ``StrEnum`` value."""
+
+    impl = Text
+    cache_ok = True
+
+    @override
+    def process_bind_param(
+        self,
+        value: QueryKind | None,
+        dialect: Dialect,
+    ) -> str | None:
+        return value.value if value is not None else None
+
+    @override
+    def process_result_value(
+        self,
+        value: str | None,
+        dialect: Dialect,
+    ) -> QueryKind | None:
+        return QueryKind(value) if value is not None else None
+
+
+class LatencyType(TypeDecorator[Latency]):
+    """Persists a measured duration as an integer number of milliseconds."""
+
+    impl = Integer
+    cache_ok = True
+
+    @override
+    def process_bind_param(
+        self,
+        value: Latency | None,
+        dialect: Dialect,
+    ) -> int | None:
+        return value.milliseconds if value is not None else None
+
+    @override
+    def process_result_value(
+        self,
+        value: int | None,
+        dialect: Dialect,
+    ) -> Latency | None:
+        return Latency(milliseconds=value) if value is not None else None
