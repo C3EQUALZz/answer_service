@@ -19,3 +19,7 @@ class RepoError(InfrastructureError):
 
 class SearchIndexError(InfrastructureError):
     """Raised when the vector store rejects a read or a write."""
+
+
+class HandlerNotFoundError(InfrastructureError):
+    """Raised when a request reaches the mediator with no handler registered."""

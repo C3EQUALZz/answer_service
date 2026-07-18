@@ -4,6 +4,9 @@ from typing import Any
 
 import pytest
 
+from answer_service.application.commands.analytics.record_query.handler import (
+    RecordQueryHandler,
+)
 from answer_service.application.commands.indexing.enqueue_indexing.handler import (
     EnqueueIndexingHandler,
 )
@@ -13,6 +16,9 @@ from answer_service.application.commands.indexing.run_indexing.handler import (
 from answer_service.application.commands.outbox.relay_outbox.handler import (
     RelayOutboxHandler,
 )
+from answer_service.application.commands.search.project_event.handler import (
+    ProjectEventHandler,
+)
 from answer_service.application.common.mediator.handlers import CommandHandler
 from answer_service.application.common.mediator.markers import Command
 from answer_service.application.common.ports.outbox import OutboxMessage
@@ -21,6 +27,16 @@ from answer_service.application.pipelines.events_pipeline import EventsPipeline
 from answer_service.application.pipelines.transaction_pipeline import (
     TransactionPipeline,
 )
+from answer_service.application.queries.analytics.get_statistics.handler import (
+    GetStatisticsHandler,
+)
+from answer_service.application.queries.analytics.list_unanswered_queries.handler import (
+    ListUnansweredQueriesHandler,
+)
+from answer_service.application.queries.indexing.get_indexing_task.handler import (
+    GetIndexingTaskHandler,
+)
+from answer_service.domain.analytics.factories.query_log_factory import QueryLogFactory
 from answer_service.domain.common.events_collection import EventsCollection
 from answer_service.domain.indexing.entities.indexing_task import IndexingTask
 from answer_service.domain.indexing.factories.indexing_task_factory import (
@@ -33,12 +49,15 @@ from tests.unit.factories.handler_factories import (
     EnqueueIndexingHandlerBuilder,
     RunIndexingHandlerBuilder,
     create_enqueue_indexing_handler,
+    create_project_event_handler,
     create_relay_outbox_handler,
     create_run_indexing_handler,
 )
 from tests.unit.factories.outbox_factories import make_outbox_message
 from tests.unit.stubs.gateways import (
+    InMemoryAnalytics,
     InMemoryIndexingTaskGateway,
+    InMemoryIndexingTaskQueryGateway,
     InMemoryOutboxGateway,
     InMemoryQACatalog,
 )
@@ -46,8 +65,10 @@ from tests.unit.stubs.infrastructure import (
     CallJournal,
     RecordingEventBus,
     RecordingOutboxPublisher,
+    RecordingSearchIndexWriter,
     RecordingTaskScheduler,
     RecordingTransactionManager,
+    StubQueryLogIdGenerator,
     StubTaskIdGenerator,
 )
 from tests.unit.stubs.source_file import StubSourceFileStorage
@@ -244,3 +265,68 @@ def pipeline_runner(
         )
 
     return run
+
+
+@pytest.fixture()
+def index_writer() -> RecordingSearchIndexWriter:
+    return RecordingSearchIndexWriter()
+
+
+@pytest.fixture()
+def project_event_handler(
+    catalog: InMemoryQACatalog,
+    index_writer: RecordingSearchIndexWriter,
+) -> ProjectEventHandler:
+    return create_project_event_handler(catalog=catalog, index_writer=index_writer)
+
+
+@pytest.fixture()
+def analytics() -> InMemoryAnalytics:
+    return InMemoryAnalytics()
+
+
+@pytest.fixture()
+def task_query_gateway() -> InMemoryIndexingTaskQueryGateway:
+    return InMemoryIndexingTaskQueryGateway()
+
+
+@pytest.fixture()
+def query_log_id_generator() -> StubQueryLogIdGenerator:
+    return StubQueryLogIdGenerator()
+
+
+@pytest.fixture()
+def query_log_factory(
+    query_log_id_generator: StubQueryLogIdGenerator,
+) -> QueryLogFactory:
+    return QueryLogFactory(query_log_id_generator)
+
+
+@pytest.fixture()
+def record_query_handler(
+    query_log_factory: QueryLogFactory,
+    analytics: InMemoryAnalytics,
+) -> RecordQueryHandler:
+    return RecordQueryHandler(query_log_factory, analytics)
+
+
+@pytest.fixture()
+def get_indexing_task_handler(
+    task_query_gateway: InMemoryIndexingTaskQueryGateway,
+) -> GetIndexingTaskHandler:
+    return GetIndexingTaskHandler(task_query_gateway)
+
+
+@pytest.fixture()
+def get_statistics_handler(
+    catalog: InMemoryQACatalog,
+    analytics: InMemoryAnalytics,
+) -> GetStatisticsHandler:
+    return GetStatisticsHandler(catalog, analytics)
+
+
+@pytest.fixture()
+def list_unanswered_handler(
+    analytics: InMemoryAnalytics,
+) -> ListUnansweredQueriesHandler:
+    return ListUnansweredQueriesHandler(analytics)

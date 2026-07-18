@@ -16,6 +16,9 @@ from answer_service.application.commands.indexing.run_indexing.handler import (
 from answer_service.application.commands.outbox.relay_outbox.handler import (
     RelayOutboxHandler,
 )
+from answer_service.application.commands.search.project_event.handler import (
+    ProjectEventHandler,
+)
 from answer_service.application.common.ports.source_file.source_row import SourceRow
 from answer_service.domain.indexing.factories.indexing_task_factory import (
     IndexingTaskFactory,
@@ -29,6 +32,7 @@ from tests.unit.stubs.gateways import (
 )
 from tests.unit.stubs.infrastructure import (
     RecordingOutboxPublisher,
+    RecordingSearchIndexWriter,
     RecordingTaskScheduler,
 )
 from tests.unit.stubs.source_file import (
@@ -92,3 +96,11 @@ class EnqueueIndexingHandlerBuilder(Protocol):
     """Signature of the ``enqueue_indexing_handler`` fixture."""
 
     def __call__(self, *, rejects: bool = False) -> EnqueueIndexingHandler: ...
+
+
+def create_project_event_handler(
+    *,
+    catalog: InMemoryQACatalog,
+    index_writer: RecordingSearchIndexWriter,
+) -> ProjectEventHandler:
+    return ProjectEventHandler(catalog, index_writer)

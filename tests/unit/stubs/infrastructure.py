@@ -6,7 +6,7 @@ rollback happened instead of a commit, and so on. Ordering is the whole point of
 the pipeline tests, and it is invisible if each stub only records its own calls.
 """
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, final, override
@@ -17,6 +17,10 @@ from answer_service.application.common.ports.outbox import (
     EventSerializer,
     OutboxMessage,
     OutboxPublisher,
+)
+from answer_service.application.common.ports.search import (
+    IndexDocument,
+    SearchIndexWriter,
 )
 from answer_service.application.common.ports.task_manager.payloads.base import (
     TaskPayload,
@@ -32,8 +36,10 @@ from answer_service.application.common.ports.task_manager.task_manager import (
 from answer_service.application.common.ports.transaction_manager import (
     TransactionManager,
 )
+from answer_service.domain.analytics.value_objects.query_log_id import QueryLogId
 from answer_service.domain.common.error import AppError
 from answer_service.domain.common.event import Event
+from answer_service.domain.indexing.value_objects.external_id import ExternalId
 from answer_service.domain.indexing.value_objects.task_id import TaskId
 
 
@@ -137,3 +143,28 @@ class StubTaskIdGenerator:
 
     def __call__(self) -> TaskId:
         return self._task_ids.pop(0) if self._task_ids else TaskId(uuid4())
+
+
+@final
+class RecordingSearchIndexWriter(SearchIndexWriter):
+    """Records what reached the search index, in order."""
+
+    def __init__(self) -> None:
+        self.upserted: list[IndexDocument] = []
+        self.deleted: list[ExternalId] = []
+
+    @override
+    async def upsert(self, documents: Sequence[IndexDocument]) -> None:
+        self.upserted.extend(documents)
+
+    @override
+    async def delete(self, external_ids: Sequence[ExternalId]) -> None:
+        self.deleted.extend(external_ids)
+
+
+@final
+class StubQueryLogIdGenerator:
+    """Hands out fresh log ids; identity is never asserted on."""
+
+    def __call__(self) -> QueryLogId:
+        return QueryLogId(uuid4())

@@ -9,6 +9,7 @@ from taskiq_redis import RedisAsyncResultBackend
 from answer_service.infrastructure.task_manager.tasks import (
     setup_indexing_tasks,
     setup_outbox_tasks,
+    setup_projection_tasks,
 )
 from answer_service.setup.configs.nats_config import NatsConfig
 from answer_service.setup.configs.redis_config import RedisConfig
@@ -83,3 +84,4 @@ def setup_task_manager_tasks(broker: AsyncBroker) -> None:
     """
     setup_indexing_tasks(broker)
     setup_outbox_tasks(broker)
+    setup_projection_tasks(broker)
