@@ -31,3 +31,7 @@ class MissingSourceColumnsError(InvalidSourceFileError):
 
 class IndexingTaskNotFoundError(ApplicationError):
     """Raised when the indexing task a worker was asked to run does not exist."""
+
+
+class MalformedEventPayloadError(ApplicationError):
+    """Raised when a relayed event payload cannot be read."""
