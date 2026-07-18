@@ -1,5 +1,3 @@
-from functools import cache
-
 from answer_service.infrastructure.persistence.models import (
     map_indexing_tasks_table,
     map_outbox_table,
@@ -8,7 +6,6 @@ from answer_service.infrastructure.persistence.models import (
 )
 
 
-@cache
 def setup_map_tables() -> None:
     """Ensures imperative SQLAlchemy mappings are initialized at application startup.
 
@@ -31,9 +28,10 @@ def setup_map_tables() -> None:
     in `env.py` for Alembic migrations to ensure all models are available
     during database migrations.
 
-    Cached so a second call is a no-op: ``map_imperatively`` raises if a class
-    is already mapped, and both the application factory and alembic's ``env.py``
-    invoke this.
+    Call exactly once per process. ``map_imperatively`` raises on a class that
+    is already mapped, so a second call is a programming error rather than a
+    no-op — each entry point invokes it once, and alembic's ``env.py`` runs in a
+    process of its own.
     """
     map_qa_pairs_table()
     map_indexing_tasks_table()
