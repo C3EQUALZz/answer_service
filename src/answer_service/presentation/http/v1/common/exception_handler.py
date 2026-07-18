@@ -7,7 +7,7 @@ import pydantic
 from fastapi import FastAPI, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.requests import Request
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import JSONResponse
 
 from answer_service.application.error import (
     ApplicationError,
@@ -159,7 +159,7 @@ class ExceptionHandler:
         self._app: Final[FastAPI] = app
         self._status_internal_server_error: Final[int] = 500
 
-    async def _handle(self, _: Request, exc: Exception) -> ORJSONResponse:
+    async def _handle(self, _: Request, exc: Exception) -> JSONResponse:
         status_code: int = self._ERROR_MAPPING.get(
             type(exc),
             status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -195,7 +195,13 @@ class ExceptionHandler:
         else:
             logger.warning("Exception '%s' occurred: '%s'.", type(exc).__name__, exc)
 
-        return ORJSONResponse(status_code=status_code, content=response)
+        # ``jsonable_encoder`` because the body is a dataclass: FastAPI only
+        # serialises those automatically for a declared response model, which an
+        # exception handler does not have.
+        return JSONResponse(
+            status_code=status_code,
+            content=jsonable_encoder(response),
+        )
 
     def setup_handlers(self) -> None:
         for exc_class in self._ERROR_MAPPING:
