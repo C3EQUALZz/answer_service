@@ -202,7 +202,6 @@ def run_indexing_handler(
 @pytest.fixture()
 def enqueue_indexing_handler(
     task_gateway: InMemoryIndexingTaskGateway,
-    task_scheduler: RecordingTaskScheduler,
     indexing_task_factory: IndexingTaskFactory,
     source_storage: StubSourceFileStorage,
 ) -> EnqueueIndexingHandlerBuilder:
@@ -211,7 +210,6 @@ def enqueue_indexing_handler(
     def build(*, rejects: bool = False) -> EnqueueIndexingHandler:
         return create_enqueue_indexing_handler(
             task_gateway=task_gateway,
-            task_scheduler=task_scheduler,
             indexing_task_factory=indexing_task_factory,
             source_storage=source_storage,
             rejects=rejects,

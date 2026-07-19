@@ -33,7 +33,6 @@ from tests.unit.stubs.gateways import (
 from tests.unit.stubs.infrastructure import (
     RecordingOutboxPublisher,
     RecordingSearchIndexWriter,
-    RecordingTaskScheduler,
 )
 from tests.unit.stubs.source_file import (
     StubSourceFileReader,
@@ -64,7 +63,6 @@ def create_run_indexing_handler(
 def create_enqueue_indexing_handler(
     *,
     task_gateway: InMemoryIndexingTaskGateway,
-    task_scheduler: RecordingTaskScheduler,
     indexing_task_factory: IndexingTaskFactory,
     source_storage: StubSourceFileStorage,
     rejects: bool = False,
@@ -74,7 +72,6 @@ def create_enqueue_indexing_handler(
         source_storage=source_storage,
         task_factory=indexing_task_factory,
         task_gateway=task_gateway,
-        task_scheduler=task_scheduler,
     )
 
 

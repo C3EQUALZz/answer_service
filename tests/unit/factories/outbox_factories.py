@@ -7,11 +7,14 @@ from uuid import uuid4
 from answer_service.application.common.ports.outbox import OutboxMessage
 
 
-def make_outbox_message(event_type: str = "QAPairAdded") -> OutboxMessage:
+def make_outbox_message(
+    event_type: str = "QAPairAdded",
+    payload: str = "{}",
+) -> OutboxMessage:
     return OutboxMessage(
         id=uuid4(),
         event_type=event_type,
-        payload="{}",
+        payload=payload,
         created_at=datetime.now(UTC),
     )
 
