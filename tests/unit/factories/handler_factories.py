@@ -23,6 +23,10 @@ from answer_service.application.commands.search.upsert_qa_pair.handler import (
     UpsertQAPairHandler,
 )
 from answer_service.application.common.ports.source_file.source_row import SourceRow
+from answer_service.application.common.services import HybridSearchService
+from answer_service.application.queries.conversation.ask_question.handler import (
+    AskQuestionHandler,
+)
 from answer_service.application.queries.search.search_qa_pairs.handler import (
     SearchQAPairsHandler,
 )
@@ -40,6 +44,7 @@ from tests.unit.stubs.gateways import (
 from tests.unit.stubs.infrastructure import (
     RecordingOutboxPublisher,
     RecordingSearchIndexWriter,
+    StubAnswerGenerator,
     StubDenseRetriever,
     StubLexicalRetriever,
 )
@@ -112,18 +117,33 @@ def create_upsert_qa_pair_handler(
     return UpsertQAPairHandler(catalog, index_writer)
 
 
-def create_search_qa_pairs_handler(
+def create_hybrid_search(
     *,
     catalog: InMemoryQACatalog,
     dense_retriever: StubDenseRetriever,
     lexical_retriever: StubLexicalRetriever,
-) -> SearchQAPairsHandler:
-    return SearchQAPairsHandler(
+) -> HybridSearchService:
+    return HybridSearchService(
         dense_retriever,
         lexical_retriever,
         RrfFusion(),
         catalog,
     )
+
+
+def create_search_qa_pairs_handler(
+    *,
+    hybrid_search: HybridSearchService,
+) -> SearchQAPairsHandler:
+    return SearchQAPairsHandler(hybrid_search)
+
+
+def create_ask_question_handler(
+    *,
+    hybrid_search: HybridSearchService,
+    answer_generator: StubAnswerGenerator,
+) -> AskQuestionHandler:
+    return AskQuestionHandler(hybrid_search, answer_generator)
 
 
 def create_remove_qa_pair_handler(

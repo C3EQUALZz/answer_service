@@ -2,6 +2,7 @@ from typing import Final
 
 from dishka import Provider, Scope
 
+from answer_service.application.common.ports.conversation import AnswerGenerator
 from answer_service.application.common.ports.embedding import Embedder
 from answer_service.application.common.ports.gateways import (
     AnalyticsCommandGateway,
@@ -34,6 +35,9 @@ from answer_service.application.common.ports.transaction_manager import (
 from answer_service.infrastructure.adapters.common import (
     OutboxEventBus,
     RetortEventSerializer,
+)
+from answer_service.infrastructure.adapters.langchain.langchain_answer_generator import (
+    LangChainAnswerGenerator,
 )
 from answer_service.infrastructure.adapters.langchain.langchain_embedder import (
     LangChainEmbedder,
@@ -106,6 +110,7 @@ def gateways_provider() -> Provider:
     provider.provide(source=TaskSchedulerOutboxPublisher, provides=OutboxPublisher)
     provider.provide(source=OutboxEventBus, provides=EventBus)
 
+    provider.provide(source=LangChainAnswerGenerator, provides=AnswerGenerator)
     provider.provide(source=LangChainEmbedder, provides=Embedder)
     provider.provide(source=QdrantSearchIndexWriter, provides=SearchIndexWriter)
     provider.provide(source=QdrantDenseRetriever, provides=DenseRetriever)

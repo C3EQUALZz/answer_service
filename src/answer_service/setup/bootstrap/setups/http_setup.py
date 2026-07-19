@@ -11,6 +11,7 @@ from answer_service.presentation.http.v1.common.routes import (
 )
 from answer_service.presentation.http.v1.middlewares import LoggingMiddleware
 from answer_service.presentation.http.v1.routes import (
+    conversation_router,
     indexing_router,
     search_router,
     statistics_router,
@@ -33,6 +34,7 @@ def setup_http_routes(app: FastAPI, /) -> None:
 
     router_v1: APIRouter = APIRouter(prefix=API_V1_PREFIX)
     router_v1.include_router(indexing_router)
+    router_v1.include_router(conversation_router)
     router_v1.include_router(search_router)
     router_v1.include_router(statistics_router)
     app.include_router(router_v1)

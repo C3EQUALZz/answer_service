@@ -37,6 +37,7 @@ from answer_service.domain.indexing.entities.qa_pair import QAPair
 from answer_service.domain.indexing.value_objects.content_hash import ContentHash
 from answer_service.domain.indexing.value_objects.external_id import ExternalId
 from answer_service.domain.indexing.value_objects.task_id import TaskId
+from answer_service.infrastructure.errors import RepoError
 
 
 @final
@@ -156,9 +157,13 @@ class InMemoryAnalytics(AnalyticsCommandGateway, AnalyticsQueryGateway):
 
     def __init__(self) -> None:
         self.logs: list[QueryLog] = []
+        self.fail_on_add: bool = False
 
     @override
     async def add(self, query_log: QueryLog) -> None:
+        if self.fail_on_add:
+            msg = "The analytics store is unavailable."
+            raise RepoError(msg)
         self.logs.append(query_log)
 
     @override

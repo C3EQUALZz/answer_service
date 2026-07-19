@@ -4,9 +4,6 @@ from typing import Any
 
 import pytest
 
-from answer_service.application.commands.analytics.record_query.handler import (
-    RecordQueryHandler,
-)
 from answer_service.application.commands.indexing.enqueue_indexing.handler import (
     EnqueueIndexingHandler,
 )
@@ -26,7 +23,11 @@ from answer_service.application.common.mediator.handlers import CommandHandler
 from answer_service.application.common.mediator.markers import Command
 from answer_service.application.common.ports.outbox import OutboxMessage
 from answer_service.application.common.ports.source_file.source_row import SourceRow
+from answer_service.application.common.services import HybridSearchService
 from answer_service.application.pipelines.events_pipeline import EventsPipeline
+from answer_service.application.pipelines.query_recording_pipeline import (
+    QueryRecordingPipeline,
+)
 from answer_service.application.pipelines.transaction_pipeline import (
     TransactionPipeline,
 )
@@ -35,6 +36,9 @@ from answer_service.application.queries.analytics.get_statistics.handler import 
 )
 from answer_service.application.queries.analytics.list_unanswered_queries.handler import (
     ListUnansweredQueriesHandler,
+)
+from answer_service.application.queries.conversation.ask_question.handler import (
+    AskQuestionHandler,
 )
 from answer_service.application.queries.indexing.get_indexing_task.handler import (
     GetIndexingTaskHandler,
@@ -54,7 +58,9 @@ from tests.unit.factories.domain_factories import make_source_reference, make_ta
 from tests.unit.factories.handler_factories import (
     EnqueueIndexingHandlerBuilder,
     RunIndexingHandlerBuilder,
+    create_ask_question_handler,
     create_enqueue_indexing_handler,
+    create_hybrid_search,
     create_relay_outbox_handler,
     create_remove_qa_pair_handler,
     create_run_indexing_handler,
@@ -76,6 +82,7 @@ from tests.unit.stubs.infrastructure import (
     RecordingSearchIndexWriter,
     RecordingTaskScheduler,
     RecordingTransactionManager,
+    StubAnswerGenerator,
     StubDenseRetriever,
     StubLexicalRetriever,
     StubQueryLogIdGenerator,
@@ -299,15 +306,38 @@ def lexical_retriever() -> StubLexicalRetriever:
 
 
 @pytest.fixture()
-def search_qa_pairs_handler(
+def answer_generator() -> StubAnswerGenerator:
+    return StubAnswerGenerator()
+
+
+@pytest.fixture()
+def hybrid_search(
     catalog: InMemoryQACatalog,
     dense_retriever: StubDenseRetriever,
     lexical_retriever: StubLexicalRetriever,
-) -> SearchQAPairsHandler:
-    return create_search_qa_pairs_handler(
+) -> HybridSearchService:
+    return create_hybrid_search(
         catalog=catalog,
         dense_retriever=dense_retriever,
         lexical_retriever=lexical_retriever,
+    )
+
+
+@pytest.fixture()
+def search_qa_pairs_handler(
+    hybrid_search: HybridSearchService,
+) -> SearchQAPairsHandler:
+    return create_search_qa_pairs_handler(hybrid_search=hybrid_search)
+
+
+@pytest.fixture()
+def ask_question_handler(
+    hybrid_search: HybridSearchService,
+    answer_generator: StubAnswerGenerator,
+) -> AskQuestionHandler:
+    return create_ask_question_handler(
+        hybrid_search=hybrid_search,
+        answer_generator=answer_generator,
     )
 
 
@@ -341,11 +371,12 @@ def query_log_factory(
 
 
 @pytest.fixture()
-def record_query_handler(
+def query_recording_pipeline(
     query_log_factory: QueryLogFactory,
     analytics: InMemoryAnalytics,
-) -> RecordQueryHandler:
-    return RecordQueryHandler(query_log_factory, analytics)
+    transaction_manager: RecordingTransactionManager,
+) -> QueryRecordingPipeline[Any, Any]:
+    return QueryRecordingPipeline(query_log_factory, analytics, transaction_manager)
 
 
 @pytest.fixture()

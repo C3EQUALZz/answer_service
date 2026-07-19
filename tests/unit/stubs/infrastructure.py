@@ -9,11 +9,13 @@ the pipeline tests, and it is invisible if each stub only records its own calls.
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, final, override
+from typing import Any, Final, final, override
 from uuid import UUID, uuid4
 
 from taskiq import ScheduleSource, ScheduledTask
 
+from answer_service.application.common.ports.conversation import AnswerGenerator
+from answer_service.application.common.ports.gateways import QAPairView
 from answer_service.application.common.ports.outbox import (
     EventBus,
     EventSerializer,
@@ -43,6 +45,7 @@ from answer_service.application.common.ports.transaction_manager import (
 from answer_service.domain.analytics.value_objects.query_log_id import QueryLogId
 from answer_service.domain.common.error import AppError
 from answer_service.domain.common.event import Event
+from answer_service.domain.conversation.value_objects.answer_text import AnswerText
 from answer_service.domain.indexing.value_objects.external_id import ExternalId
 from answer_service.domain.indexing.value_objects.task_id import TaskId
 from answer_service.domain.search.value_objects.scored_candidate import ScoredCandidate
@@ -194,6 +197,29 @@ class StubLexicalRetriever(LexicalRetriever):
     async def retrieve(self, criteria: SearchCriteria) -> Sequence[ScoredCandidate]:
         self.criteria.append(criteria)
         return self.candidates
+
+
+@final
+class StubAnswerGenerator(AnswerGenerator):
+    """Answers with a fixed line, and remembers what it was grounded in.
+
+    What the model writes is not the interesting part; *whether it was called at
+    all* is, because a call made with nothing retrieved is the ungrounded answer
+    this service must never produce.
+    """
+
+    def __init__(self, text: str = "Reset it from settings.") -> None:
+        self.text: Final[str] = text
+        self.calls: list[tuple[str, Sequence[QAPairView]]] = []
+
+    @override
+    async def generate(
+        self,
+        question: str,
+        grounding: Sequence[QAPairView],
+    ) -> AnswerText:
+        self.calls.append((question, grounding))
+        return AnswerText(content=self.text)
 
 
 @final

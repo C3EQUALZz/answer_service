@@ -12,6 +12,7 @@ from answer_service.setup.ioc.providers import (
     handlers_provider,
     mediator_provider,
     pipelines_provider,
+    services_provider,
     task_manager_provider,
     vector_store_provider,
 )
@@ -32,6 +33,7 @@ def setup_providers() -> Iterable[Provider]:
         domain_provider(),
         gateways_provider(),
         pipelines_provider(),
+        services_provider(),
         handlers_provider(),
         mediator_provider(),
         TaskiqProvider(),

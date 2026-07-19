@@ -2,12 +2,6 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from answer_service.application.commands.analytics.record_query.command import (
-    RecordQueryCommand,
-)
-from answer_service.application.commands.analytics.record_query.handler import (
-    RecordQueryHandler,
-)
 from answer_service.application.common.query_params.pagination import Pagination
 from answer_service.application.common.query_params.sorting import SortingOrder
 from answer_service.application.error import PaginationError
@@ -25,7 +19,6 @@ from answer_service.application.queries.analytics.list_unanswered_queries.query 
     ListUnansweredQueriesQuery,
 )
 from answer_service.domain.analytics.value_objects.period import Period
-from answer_service.domain.analytics.value_objects.query_kind import QueryKind
 from answer_service.domain.common.events_collection import EventsCollection
 from tests.unit.factories.domain_factories import (
     SOURCE_UPDATED_AT,
@@ -39,48 +32,6 @@ WINDOW = Period(
     start=SOURCE_UPDATED_AT - timedelta(days=1),
     end=SOURCE_UPDATED_AT + timedelta(days=1),
 )
-
-
-async def test_records_a_served_query(
-    record_query_handler: RecordQueryHandler,
-    analytics: InMemoryAnalytics,
-) -> None:
-    await record_query_handler.handle(
-        RecordQueryCommand(
-            text="how do I export data?",
-            kind=QueryKind.SEARCH,
-            results_count=4,
-            latency_ms=120,
-            top_score=0.87,
-            category="billing",
-        ),
-    )
-
-    log = analytics.logs[0]
-    assert log.text.content == "how do I export data?"
-    assert log.kind is QueryKind.SEARCH
-    assert log.outcome.results_count == 4
-    assert log.latency.milliseconds == 120
-    assert log.category is not None
-    assert log.category.value == "billing"
-    assert not log.is_unanswered
-
-
-async def test_a_query_with_no_results_is_recorded_as_unanswered(
-    record_query_handler: RecordQueryHandler,
-    analytics: InMemoryAnalytics,
-) -> None:
-    """The gap report is built entirely on this flag."""
-    await record_query_handler.handle(
-        RecordQueryCommand(
-            text="how do I cancel?",
-            kind=QueryKind.ASK,
-            results_count=0,
-            latency_ms=90,
-        ),
-    )
-
-    assert analytics.logs[0].is_unanswered
 
 
 async def test_statistics_combine_the_catalog_and_the_query_log(

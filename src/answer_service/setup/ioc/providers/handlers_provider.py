@@ -2,9 +2,6 @@ from typing import Final
 
 from dishka import Provider, Scope
 
-from answer_service.application.commands.analytics.record_query.handler import (
-    RecordQueryHandler,
-)
 from answer_service.application.commands.indexing.enqueue_indexing.handler import (
     EnqueueIndexingHandler,
 )
@@ -32,6 +29,9 @@ from answer_service.application.queries.analytics.get_statistics.handler import 
 from answer_service.application.queries.analytics.list_unanswered_queries.handler import (
     ListUnansweredQueriesHandler,
 )
+from answer_service.application.queries.conversation.ask_question.handler import (
+    AskQuestionHandler,
+)
 from answer_service.application.queries.indexing.get_indexing_task.handler import (
     GetIndexingTaskHandler,
 )
@@ -56,10 +56,10 @@ def handlers_provider() -> Provider:
         RelayOutboxHandler,
         UpsertQAPairHandler,
         RemoveQAPairHandler,
-        RecordQueryHandler,
         GetIndexingTaskHandler,
         GetStatisticsHandler,
         ListUnansweredQueriesHandler,
         SearchQAPairsHandler,
+        AskQuestionHandler,
     )
     return provider

@@ -2,12 +2,6 @@ from typing import Final
 
 from dishka import Provider, Scope
 
-from answer_service.application.commands.analytics.record_query.command import (
-    RecordQueryCommand,
-)
-from answer_service.application.commands.analytics.record_query.handler import (
-    RecordQueryHandler,
-)
 from answer_service.application.commands.indexing.enqueue_indexing.command import (
     EnqueueIndexingCommand,
 )
@@ -50,9 +44,13 @@ from answer_service.application.commands.search.upsert_qa_pair.command import (
 from answer_service.application.commands.search.upsert_qa_pair.handler import (
     UpsertQAPairHandler,
 )
+from answer_service.application.common.analytics import RecordableQuery
 from answer_service.application.common.mediator.markers import Command
 from answer_service.application.common.mediator.sender import Sender
 from answer_service.application.pipelines.events_pipeline import EventsPipeline
+from answer_service.application.pipelines.query_recording_pipeline import (
+    QueryRecordingPipeline,
+)
 from answer_service.application.pipelines.transaction_pipeline import (
     TransactionPipeline,
 )
@@ -67,6 +65,12 @@ from answer_service.application.queries.analytics.list_unanswered_queries.handle
 )
 from answer_service.application.queries.analytics.list_unanswered_queries.query import (
     ListUnansweredQueriesQuery,
+)
+from answer_service.application.queries.conversation.ask_question.handler import (
+    AskQuestionHandler,
+)
+from answer_service.application.queries.conversation.ask_question.query import (
+    AskQuestionQuery,
 )
 from answer_service.application.queries.indexing.get_indexing_task.handler import (
     GetIndexingTaskHandler,
@@ -98,9 +102,11 @@ def make_registry() -> Registry:
     automatically, and cannot quietly run outside a transaction because someone
     forgot a line here.
 
-    Queries are deliberately left uncovered — they mutate nothing, so opening a
-    transaction around them would buy nothing and hold a connection for the
-    duration of a report.
+    Queries get no transaction — they mutate nothing, so opening one would buy
+    nothing and hold a connection for the duration of a report. The queries that
+    answer a user do get the recording pipeline, registered against the
+    ``RecordableQuery`` marker for the same reason: the statistics are only
+    trustworthy if a query cannot be served without being counted.
 
     The order below is the order of execution: the transaction opens first and
     commits last, with the events drained inside it. Reversed, events would be
@@ -110,6 +116,7 @@ def make_registry() -> Registry:
     registry: Final[Registry] = Registry()
 
     registry.add_pipeline_handlers(Command, TransactionPipeline, EventsPipeline)
+    registry.add_pipeline_handlers(RecordableQuery, QueryRecordingPipeline)
 
     registry.add_request_handler(EnqueueIndexingCommand, EnqueueIndexingHandler)
     registry.add_request_handler(MarkIndexingRunningCommand, MarkIndexingRunningHandler)
@@ -118,10 +125,9 @@ def make_registry() -> Registry:
     registry.add_request_handler(RelayOutboxCommand, RelayOutboxHandler)
     registry.add_request_handler(UpsertQAPairCommand, UpsertQAPairHandler)
     registry.add_request_handler(RemoveQAPairCommand, RemoveQAPairHandler)
-    registry.add_request_handler(RecordQueryCommand, RecordQueryHandler)
-
     registry.add_request_handler(GetIndexingTaskQuery, GetIndexingTaskHandler)
     registry.add_request_handler(SearchQAPairsQuery, SearchQAPairsHandler)
+    registry.add_request_handler(AskQuestionQuery, AskQuestionHandler)
     registry.add_request_handler(GetStatisticsQuery, GetStatisticsHandler)
     registry.add_request_handler(
         ListUnansweredQueriesQuery,

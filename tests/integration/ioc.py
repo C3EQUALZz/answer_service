@@ -28,10 +28,13 @@ from answer_service.setup.ioc.providers import (
     handlers_provider,
     mediator_provider,
     pipelines_provider,
+    services_provider,
     task_manager_provider,
 )
 
 EMBEDDING_DIMENSION: Final[int] = 8
+
+FAKE_ANSWER: Final[str] = "A grounded answer."
 
 
 def create_fake_embeddings() -> Embeddings:
@@ -40,7 +43,7 @@ def create_fake_embeddings() -> Embeddings:
 
 
 def create_fake_chat_model() -> BaseChatModel:
-    return FakeListChatModel(responses=["A grounded answer."])
+    return FakeListChatModel(responses=[FAKE_ANSWER])
 
 
 def create_in_memory_qdrant_client() -> QdrantClient:
@@ -88,6 +91,7 @@ def test_app_providers() -> Iterable[Provider]:
         domain_provider(),
         gateways_provider(),
         pipelines_provider(),
+        services_provider(),
         handlers_provider(),
         mediator_provider(),
     )

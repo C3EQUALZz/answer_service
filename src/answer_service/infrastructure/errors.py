@@ -17,6 +17,10 @@ class RepoError(InfrastructureError):
     """Raised when a persistence gateway fails to execute a statement."""
 
 
+class AnswerGenerationError(InfrastructureError):
+    """Raised when the chat model fails to produce an answer."""
+
+
 class SearchIndexError(InfrastructureError):
     """Raised when the vector store rejects a read or a write."""
 
