@@ -1,0 +1,43 @@
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore"
+      include: scope
+    groups:
+      python-minor-patch:
+        update-types: ["minor", "patch"]
+      langchain:
+        patterns:
+          - "langchain*"
+    ignore:
+      # A major bump here is a deliberate migration, not a dependency update.
+      - dependency-name: "sqlalchemy"
+        update-types: ["version-update:semver-major"]
+      # The embedding dimension is baked into the collection; needs a reindex.
+      - dependency-name: "qdrant-client"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "ci"
+
+  - package-ecosystem: docker
+    directory: "/deploy/prod/answer_service"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "chore"

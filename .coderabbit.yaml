@@ -1,0 +1,124 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+early_access: false
+
+reviews:
+  profile: assertive
+  request_changes_workflow: false
+  high_level_summary: true
+  review_status: true
+  poem: false
+  collapse_walkthrough: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - master
+
+  path_filters:
+    - "!uv.lock"
+    - "!**/_version.py"
+    - "!**/__pycache__/**"
+    - "!src/answer_service/infrastructure/persistence/migrations/**"
+
+  path_instructions:
+    - path: "src/answer_service/domain/**"
+      instructions: >-
+        Domain layer. It must import nothing from application, infrastructure or
+        presentation, and must contain no IO, no async and no framework types.
+        Entities and aggregates inherit Entity / Aggregate; use Aggregate only
+        when the type emits domain events, otherwise it drags in an
+        EventsCollection nobody drains. Value objects inherit ValueObject,
+        implement _validate() with @override, and never override __post_init__.
+        Value objects are keyword-only, except QAContent and QueryOutcome, which
+        SQLAlchemy builds positionally as composites. Domain services inherit
+        BaseDomainService and hold no state. Contexts do not import each other's
+        value objects; only ExternalId crosses a boundary.
+
+    - path: "src/answer_service/application/**"
+      instructions: >-
+        Application layer. Handlers inherit CommandHandler / QueryHandler, take
+        collaborators in __init__ stored as Final, and implement handle() with
+        @override. Flag any `except Exception` — handlers catch AppError or a
+        specific subclass. Flag any handler that catches a failure, records it
+        and returns normally: that makes the transaction pipeline commit
+        partially applied work. Persistence goes through gateways
+        (add / read_by_id / update / delete_by_id), never repositories. Query
+        gateways return purpose-built read models and aggregate in the database
+        — flag code that loads rows to count them in Python.
+
+    - path: "src/answer_service/infrastructure/**"
+      instructions: >-
+        Infrastructure implements ports declared in application. Adapters must
+        wrap third-party errors in InfrastructureError subclasses — flag any
+        library exception that can escape an adapter. Persistence uses
+        imperative SQLAlchemy mapping; the domain must stay free of ORM types.
+        Event consumers must be idempotent: delivery is at-least-once, so flag a
+        projection that trusts an event payload instead of reading current state.
+
+    - path: "src/answer_service/presentation/**"
+      instructions: >-
+        Routes inject FromDishka[Sender] and dispatch a command or query; a
+        route that touches a gateway directly is a bug. Every router needs
+        route_class=DishkaRoute. Application DTOs are mapped to pydantic schemas
+        explicitly in schemas.py. Non-2xx responses are documented with
+        {"model": ExceptionSchema}. Every new error must appear in
+        ExceptionHandler._ERROR_MAPPING, keyed by exact type — an unmapped error
+        answers 500 on purpose. 5xx messages must never carry a host, table or
+        query to the client.
+
+    - path: "src/answer_service/setup/**"
+      instructions: >-
+        Configs are plain dataclasses; env mapping lives in a source factory and
+        validation in a loader. Secret fields must be listed in
+        secret_field_names so a startup failure cannot log them. An EnvSource
+        without a prefix matches by field name — flag a generic field name such
+        as `path` or `host` that could collide with a system variable. dishka
+        providers: APP scope only for things holding no per-request state;
+        sessions, gateways and handlers are REQUEST. Constructor parameter types
+        must be importable at runtime — flag any move under `if TYPE_CHECKING`.
+
+    - path: "tests/**"
+      instructions: >-
+        Arrange / Act / Assert, separated by blank lines. Tests are named by
+        behaviour and outcome, not by method name. Fixtures live only in
+        conftest.py, builders in tests/unit/factories/, stubs in
+        tests/unit/stubs/ — flag any defined next to a test. Use
+        pytest.mark.usefixtures for fixtures whose value the test never reads.
+        Flag tests that assert library behaviour rather than our decisions.
+        Integration tests must resolve ports from the container, never
+        construct adapters directly.
+
+    - path: ".github/workflows/**"
+      instructions: >-
+        Third-party actions must be pinned to a full commit SHA with the version
+        in a trailing comment. Checkout uses persist-credentials: false unless
+        the job pushes. Permissions are least-privilege and declared per job.
+        Flag any workflow that checks out pull-request code under
+        pull_request_target.
+
+  tools:
+    ruff:
+      enabled: true
+    # ruff already covers this repo with select = ["ALL"]; a second linter would
+    # only add duplicate comments.
+    pylint:
+      enabled: false
+    flake8:
+      enabled: false
+    gitleaks:
+      enabled: true
+    actionlint:
+      enabled: true
+    hadolint:
+      enabled: true
+    yamllint:
+      enabled: true
+    markdownlint:
+      enabled: true
+    semgrep:
+      enabled: true
+
+chat:
+  auto_reply: true

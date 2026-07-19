@@ -1,0 +1,68 @@
+# Auto-label PRs by changed paths (actions/labeler v6).
+
+"layer: domain":
+  - changed-files:
+      - any-glob-to-any-file: "src/answer_service/domain/**"
+
+"layer: application":
+  - changed-files:
+      - any-glob-to-any-file: "src/answer_service/application/**"
+
+"layer: infrastructure":
+  - changed-files:
+      - any-glob-to-any-file: "src/answer_service/infrastructure/**"
+
+"layer: presentation":
+  - changed-files:
+      - any-glob-to-any-file: "src/answer_service/presentation/**"
+
+"layer: setup":
+  - changed-files:
+      - any-glob-to-any-file: "src/answer_service/setup/**"
+
+"area: migrations":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/answer_service/infrastructure/persistence/migrations/**"
+          - "alembic.ini"
+
+"area: tests":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "tests/**"
+          - "pytest.ini"
+          - ".coveragerc"
+
+"area: ci":
+  - changed-files:
+      - any-glob-to-any-file: ".github/**"
+
+"area: deploy":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "deploy/**"
+          - "docker-compose.yaml"
+          - ".dockerignore"
+
+"area: tooling":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "justfile"
+          - "ruff.toml"
+          - "mypy.ini"
+          - ".importlinter"
+          - ".pre-commit-config.yaml"
+          - "pyproject.toml"
+          - "uv.lock"
+
+"area: agents":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "AGENTS.md"
+          - "CLAUDE.md"
+          - ".claude/**"
+          - ".codex/**"
+
+"area: docs":
+  - changed-files:
+      - any-glob-to-any-file: "**/*.md"

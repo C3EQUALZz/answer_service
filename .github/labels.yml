@@ -1,0 +1,54 @@
+# Declarative label set, synced by .github/workflows/labels.yml.
+- name: bug
+  color: d73a4a
+  description: Something isn't working
+- name: enhancement
+  color: a2eeef
+  description: New feature or request
+- name: documentation
+  color: 0075ca
+  description: Documentation changes
+- name: dependencies
+  color: 0366d6
+  description: Dependency updates
+- name: security
+  color: b60205
+  description: Security-relevant change or report
+
+- name: "layer: domain"
+  color: 1d76db
+  description: Business rules, entities, value objects
+- name: "layer: application"
+  color: 1d76db
+  description: Use cases, ports, pipelines
+- name: "layer: infrastructure"
+  color: 1d76db
+  description: Adapters, persistence, brokers
+- name: "layer: presentation"
+  color: 1d76db
+  description: HTTP routes and schemas
+- name: "layer: setup"
+  color: 1d76db
+  description: Configs, bootstrap, DI container
+
+- name: "area: migrations"
+  color: 5319e7
+  description: Alembic revisions and table mappings
+- name: "area: tests"
+  color: 0e8a16
+  description: Unit and integration tests
+- name: "area: ci"
+  color: 0e8a16
+  description: CI / workflows
+- name: "area: deploy"
+  color: 0e8a16
+  description: Dockerfile, compose, deployment
+- name: "area: tooling"
+  color: 0e8a16
+  description: just / ruff / mypy / import-linter / hooks
+- name: "area: agents"
+  color: fbca04
+  description: AGENTS.md, skills, agent configuration
+- name: "area: docs"
+  color: 0075ca
+  description: Documentation

@@ -1,0 +1,59 @@
+name: Bug report
+description: Something behaves differently from what it should
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you observe, and what did you expect instead?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - HTTP API
+        - Worker (indexing / projection)
+        - Scheduler (outbox relay)
+        - Migrations
+        - Configuration / startup
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: >-
+        A request, an uploaded file, or a failing test. If a source file is
+        involved, its format and a few representative rows matter — several
+        bugs here have come from a file that validated on upload and failed in
+        the worker.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / traceback
+      description: Redact credentials before pasting.
+      render: shell
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Tag, commit SHA, or image tag.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Python version, OS, and how it is running (compose, image, local).

@@ -1,0 +1,6 @@
+# Configuration for zizmor (GitHub Actions static security analysis).
+rules:
+  dangerous-triggers:
+    ignore:
+      # Requires a writable token; the workflow checks out nothing.
+      - labeler.yml
