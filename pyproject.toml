@@ -95,3 +95,7 @@ skips = ["B101"]
 
 [tool.typos.default.extend-words]
 selectin = "selectin"
+# langchain's async methods are the sync name with an `a` prefix, so `aadd_texts`
+# reads as a misspelling of `add_texts`. The hook autofixes, and "correcting" it
+# swaps an awaited coroutine for a sync call that returns a list.
+aadd = "aadd"

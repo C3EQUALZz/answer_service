@@ -21,7 +21,7 @@ ruff-check *params:
   uv run --active --frozen ruff check --exit-non-zero-on-fix {{params}}
 
 _codespell:
-  uv run --active --frozen codespell -L Dependant,dependant,selectin
+  uv run --active --frozen codespell -L Dependant,dependant,selectin,aadd
 
 [doc("Check typos")]
 [group("linter")]
