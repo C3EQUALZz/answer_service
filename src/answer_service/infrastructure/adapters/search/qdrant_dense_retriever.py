@@ -49,6 +49,14 @@ class QdrantDenseRetriever(DenseRetriever):
 
     @override
     async def retrieve(self, criteria: SearchCriteria) -> Sequence[ScoredCandidate]:
+        logger.debug(
+            "qdrant_dense: searching '%s', k=%d, floor=%.3f, category=%s",
+            criteria.query.content,
+            criteria.top_k.value,
+            self._score_floor,
+            criteria.category,
+        )
+
         try:
             hits: list[
                 tuple[Document, float]
@@ -59,8 +67,21 @@ class QdrantDenseRetriever(DenseRetriever):
                 score_threshold=self._score_floor,
             )
         except Exception as e:
+            logger.exception("qdrant_dense: search failed")
             msg = "Failed to query Qdrant for dense candidates."
             raise SearchIndexError(msg) from e
+
+        logger.info(
+            "qdrant_dense: %d candidate(s) above floor %.3f",
+            len(hits),
+            self._score_floor,
+        )
+        for document, score in hits:
+            logger.debug(
+                "qdrant_dense: '%s' scored %.4f",
+                document.metadata[EXTERNAL_ID_METADATA_KEY],
+                score,
+            )
 
         return [
             ScoredCandidate(

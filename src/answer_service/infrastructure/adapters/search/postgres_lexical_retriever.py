@@ -44,12 +44,33 @@ class PostgresLexicalRetriever(LexicalRetriever):
 
     @override
     async def retrieve(self, criteria: SearchCriteria) -> Sequence[ScoredCandidate]:
+        logger.debug(
+            "postgres_lexical: searching '%s', top_k=%d, floor=%.3f, category=%s",
+            criteria.query.content,
+            criteria.top_k.value,
+            self._score_floor,
+            criteria.category,
+        )
+
         try:
             statement = self._statement(criteria, self._score_floor)
             rows = (await self._session.execute(statement)).all()
         except SQLAlchemyError as e:
+            logger.exception("postgres_lexical: search failed")
             msg = "Failed to query PostgreSQL for lexical candidates."
             raise RepoError(msg) from e
+
+        logger.info(
+            "postgres_lexical: %d candidate(s) above floor %.3f",
+            len(rows),
+            self._score_floor,
+        )
+        for row in rows:
+            logger.debug(
+                "postgres_lexical: '%s' ranked %.4f",
+                row.external_id,
+                float(getattr(row, RANK_LABEL)),
+            )
 
         return [
             ScoredCandidate(

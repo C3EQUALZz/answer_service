@@ -35,11 +35,16 @@ async def upsert_qa_pair_task(
     sender: FromDishka[Sender],
 ) -> None:
     """Applies a created or changed pair to the search index."""
-    await sender.send(
-        UpsertQAPairCommand(
-            external_id=ExternalId(value=payload.body.external_id.value),
-        ),
+    external_id = payload.body.external_id.value
+    logger.info(
+        "upsert_qa_pair_task: %s for '%s' (message %s)",
+        payload.event_type,
+        external_id,
+        payload.message_id,
     )
+
+    await sender.send(UpsertQAPairCommand(external_id=ExternalId(value=external_id)))
+    logger.info("upsert_qa_pair_task: '%s' projected", external_id)
 
 
 @inject(patch_module=True)
@@ -48,11 +53,16 @@ async def remove_qa_pair_task(
     sender: FromDishka[Sender],
 ) -> None:
     """Clears a removed pair from the search index."""
-    await sender.send(
-        RemoveQAPairCommand(
-            external_id=ExternalId(value=payload.body.external_id.value),
-        ),
+    external_id = payload.body.external_id.value
+    logger.info(
+        "remove_qa_pair_task: %s for '%s' (message %s)",
+        payload.event_type,
+        external_id,
+        payload.message_id,
     )
+
+    await sender.send(RemoveQAPairCommand(external_id=ExternalId(value=external_id)))
+    logger.info("remove_qa_pair_task: '%s' cleared", external_id)
 
 
 def setup_projection_tasks(broker: AsyncBroker) -> None:

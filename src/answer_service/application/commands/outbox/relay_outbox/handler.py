@@ -44,6 +44,15 @@ class RelayOutboxHandler(CommandHandler[RelayOutboxCommand, RelayOutboxResponse]
         messages = await self._outbox_command_gateway.read_pending(
             limit=command.batch_size,
         )
+        if not messages:
+            logger.debug("relay_outbox: nothing pending")
+            return RelayOutboxResponse(published=0, total=0)
+
+        logger.info(
+            "relay_outbox: %d pending message(s), batch size %d",
+            len(messages),
+            command.batch_size,
+        )
         published = 0
 
         for message in messages:
@@ -59,6 +68,11 @@ class RelayOutboxHandler(CommandHandler[RelayOutboxCommand, RelayOutboxResponse]
 
             await self._outbox_command_gateway.mark_processed(message.id)
             published += 1
+            logger.debug(
+                "relay_outbox: published %s (id=%s)",
+                message.event_type,
+                message.id,
+            )
 
         logger.info(
             "relay_outbox: published=%d / total=%d",

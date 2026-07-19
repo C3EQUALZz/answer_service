@@ -55,14 +55,27 @@ class PolarsSourceFileReader(SourceFileReader):
 
     @override
     async def validate(self, *, content: bytes, filename: str) -> None:
+        logger.info(
+            "source_reader: validating '%s' (%d bytes)",
+            filename,
+            len(content),
+        )
         frame = await asyncio.to_thread(self._parse, content, filename)
         self._ensure_columns(frame, filename)
+        logger.info(
+            "source_reader: '%s' is valid, %d row(s)",
+            filename,
+            frame.height,
+        )
 
     @override
     async def read_rows(self, *, content: bytes) -> Sequence[SourceRow]:
+        logger.info("source_reader: reading %d bytes", len(content))
         frame = await asyncio.to_thread(self._parse, content, "")
         self._ensure_columns(frame, "")
-        return [self._to_row(row) for row in frame.iter_rows(named=True)]
+        rows = [self._to_row(row) for row in frame.iter_rows(named=True)]
+        logger.info("source_reader: parsed %d row(s)", len(rows))
+        return rows
 
     def _parse(self, content: bytes, filename: str) -> pl.DataFrame:
         """Chooses the parser by what the bytes are, not what they are called.
@@ -77,6 +90,10 @@ class PolarsSourceFileReader(SourceFileReader):
                 return pl.read_excel(io.BytesIO(content))
             return pl.read_csv(io.BytesIO(content))
         except Exception as e:
+            logger.exception(
+                "source_reader: could not parse '%s'",
+                filename or "the source file",
+            )
             msg = f"'{filename or 'the source file'}' could not be parsed."
             raise UnsupportedSourceFormatError(msg) from e
 

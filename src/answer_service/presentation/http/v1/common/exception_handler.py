@@ -175,13 +175,19 @@ class ExceptionHandler:
 
         if status_code >= self._status_internal_server_error:
             logger.error(
-                "Exception '%s' occurred: '%s'.",
+                "exception: %s answered %d: %s",
                 type(exc).__name__,
+                status_code,
                 exc,
                 exc_info=exc,
             )
         else:
-            logger.warning("Exception '%s' occurred: '%s'.", type(exc).__name__, exc)
+            logger.warning(
+                "exception: %s answered %d: %s",
+                type(exc).__name__,
+                status_code,
+                exc,
+            )
 
         return JSONResponse(
             status_code=status_code,

@@ -33,8 +33,14 @@ class MediatorImpl(Sender):
     async def send[TResponse](self, request: BaseRequest[TResponse]) -> TResponse:
         request_type = type(request)
 
+        logger.info("mediator: dispatching %s", request_type.__name__)
+
         handler_type = self._registry.get_request_handler(request_type)
         if handler_type is None:
+            logger.error(
+                "mediator: no handler registered for %s",
+                request_type.__name__,
+            )
             msg = f"No handler registered for '{request_type.__name__}'."
             raise HandlerNotFoundError(msg)
 
@@ -51,10 +57,16 @@ class MediatorImpl(Sender):
         )
 
         logger.debug(
-            "Dispatching %s through %d pipeline(s)",
+            "mediator: %s runs through %d pipeline(s): %s",
             request_type.__name__,
             len(pipeline_handlers),
+            [type(pipeline).__name__ for pipeline in pipeline_handlers],
         )
 
         response: TResponse = await handle_next(request)
+        logger.info(
+            "mediator: %s handled by %s",
+            request_type.__name__,
+            handler_type.__name__,
+        )
         return response

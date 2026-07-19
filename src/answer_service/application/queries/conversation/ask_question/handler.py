@@ -37,16 +37,35 @@ class AskQuestionHandler(QueryHandler[AskQuestionQuery, AskQuestionResponse]):
 
     @override
     async def handle(self, query: AskQuestionQuery) -> AskQuestionResponse:
+        question = query.criteria.query.content
+        logger.info(
+            "ask_question: question '%s', top_k=%d, category=%s",
+            question,
+            query.criteria.top_k.value,
+            query.criteria.category,
+        )
+
         grounding = await self._hybrid_search.search(query.criteria)
 
         if not grounding:
-            logger.info("ask: nothing retrieved, declining to answer")
+            logger.info(
+                "ask_question: nothing retrieved for '%s', declining to answer",
+                question,
+            )
             return AskQuestionResponse(answer=None, grounding=())
 
+        logger.info(
+            "ask_question: grounding '%s' in %d pair(s): %s",
+            question,
+            len(grounding),
+            [hit.pair.external_id for hit in grounding],
+        )
+
         text = await self._answer_generator.generate(
-            query.criteria.query.content,
+            question,
             [hit.pair for hit in grounding],
         )
+        logger.info("ask_question: answered '%s' with '%s'", question, text.content)
 
         return AskQuestionResponse(
             answer=GroundedAnswer(

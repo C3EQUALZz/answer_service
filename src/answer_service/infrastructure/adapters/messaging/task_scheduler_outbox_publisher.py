@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Final, final, override
 
 from answer_service.application.common.ports.outbox import (
@@ -13,6 +14,8 @@ from answer_service.application.common.ports.task_manager.task_id import TaskKey
 from answer_service.application.common.ports.task_manager.task_manager import (
     TaskScheduler,
 )
+
+logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 
 @final
@@ -43,6 +46,12 @@ class TaskSchedulerOutboxPublisher(OutboxPublisher):
             TaskKey(message.event_type),
             message.id,
         )
+        logger.info(
+            "outbox_publisher: scheduling %s as task %s",
+            message.event_type,
+            task_id,
+        )
+
         await self._task_scheduler.schedule(
             task_id,
             OutboxEventPayload[RawEventBody](

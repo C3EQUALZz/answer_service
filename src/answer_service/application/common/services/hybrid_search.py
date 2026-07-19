@@ -65,14 +65,28 @@ class HybridSearchService:
             self._dense_retriever.retrieve(criteria),
             self._lexical_retriever.retrieve(criteria),
         )
+        logger.info(
+            "hybrid_search: '%s' -> dense=%d lexical=%d candidate(s)",
+            criteria.query.content,
+            len(dense),
+            len(lexical),
+        )
 
         ranked = self._rrf_fusion.fuse(
             dense=dense,
             lexical=lexical,
             top_k=criteria.top_k,
         )
+        logger.info("hybrid_search: fused into %d result(s)", len(ranked))
 
         views = await self._catalog.read_views(result.external_id for result in ranked)
+        missing = [r.external_id for r in ranked if r.external_id not in views]
+        if missing:
+            logger.warning(
+                "hybrid_search: dropping %d ranked pair(s) the catalog lost: %s",
+                len(missing),
+                missing,
+            )
 
         return tuple(
             SearchHit(result=result, pair=views[result.external_id])

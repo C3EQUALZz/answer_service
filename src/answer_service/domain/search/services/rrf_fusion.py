@@ -1,3 +1,4 @@
+import logging
 from typing import TYPE_CHECKING, Final
 
 from answer_service.domain.common.service import BaseDomainService
@@ -15,6 +16,9 @@ if TYPE_CHECKING:
     from answer_service.domain.search.value_objects.top_k import TopK
 
 DEFAULT_RRF_K: int = 60
+
+
+logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 
 class RrfFusion(BaseDomainService):
@@ -57,6 +61,13 @@ class RrfFusion(BaseDomainService):
     ) -> tuple[RankedResult, ...]:
         dense_by_id = self._best_positions(dense)
         lexical_by_id = self._best_positions(lexical)
+        logger.debug(
+            "rrf_fusion: fusing dense=%d lexical=%d, k=%d, top_k=%d",
+            len(dense_by_id),
+            len(lexical_by_id),
+            self._k,
+            top_k.value,
+        )
 
         fused: list[tuple[ExternalId, Scores]] = []
         for external_id in dense_by_id.keys() | lexical_by_id.keys():
@@ -81,6 +92,11 @@ class RrfFusion(BaseDomainService):
             )
 
         fused.sort(key=lambda item: (-item[1].final.value, item[0].value))
+        logger.debug(
+            "rrf_fusion: %d unique candidate(s), returning %d",
+            len(fused),
+            min(len(fused), top_k.value),
+        )
 
         return tuple(
             RankedResult(external_id=external_id, rank=position, scores=scores)

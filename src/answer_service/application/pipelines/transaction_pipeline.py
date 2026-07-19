@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Final, override
 
 from answer_service.application.common.mediator.handlers import (
@@ -9,6 +10,8 @@ from answer_service.application.common.ports.transaction_manager import (
     TransactionManager,
 )
 from answer_service.domain.common.error import AppError
+
+logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 
 class TransactionPipeline[TCommand: Command[Any], TResponse](
@@ -29,11 +32,16 @@ class TransactionPipeline[TCommand: Command[Any], TResponse](
         request: TCommand,
         handle_next: HandleNext[TCommand, TResponse],
     ) -> TResponse:
+        name = type(request).__name__
+        logger.info("transaction: opening for %s", name)
+
         try:
             response = await handle_next(request)
         except AppError:
+            logger.exception("transaction: %s failed, rolling back", name)
             await self._transaction_manager.rollback()
             raise
 
         await self._transaction_manager.commit()
+        logger.info("transaction: committed %s", name)
         return response

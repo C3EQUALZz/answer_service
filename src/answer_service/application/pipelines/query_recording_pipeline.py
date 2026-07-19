@@ -60,6 +60,11 @@ class QueryRecordingPipeline[TQuery: RecordableQuery[Any], TResponse: ServedQuer
         started_at = time.perf_counter()
         response = await handle_next(request)
         elapsed = time.perf_counter() - started_at
+        logger.info(
+            "query_recording: %s served in %d ms",
+            type(request).__name__,
+            round(elapsed * MILLISECONDS_PER_SECOND),
+        )
 
         await self._record(
             request,
@@ -98,6 +103,13 @@ class QueryRecordingPipeline[TQuery: RecordableQuery[Any], TResponse: ServedQuer
             )
             await self._analytics_gateway.add(query_log)
             await self._transaction_manager.commit()
+            logger.info(
+                "query_recording: journalled %s query '%s' (%d result(s), %d ms)",
+                request.journalled_kind.value,
+                request.journalled_text,
+                response.results_count,
+                latency_ms,
+            )
         except AppError:
             logger.exception(
                 "failed to record a %s query for reporting",

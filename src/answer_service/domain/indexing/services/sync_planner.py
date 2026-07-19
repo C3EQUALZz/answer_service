@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING
+import logging
+from typing import TYPE_CHECKING, Final
 
 from answer_service.domain.common.service import BaseDomainService
 from answer_service.domain.indexing.errors import DuplicateExternalIdError
@@ -10,6 +11,9 @@ if TYPE_CHECKING:
     from answer_service.domain.indexing.value_objects.content_hash import ContentHash
     from answer_service.domain.indexing.value_objects.desired_pair import DesiredPair
     from answer_service.domain.indexing.value_objects.external_id import ExternalId
+
+
+logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 
 class SyncPlanner(BaseDomainService):
@@ -33,6 +37,10 @@ class SyncPlanner(BaseDomainService):
 
         for pair in desired:
             if pair.external_id in seen:
+                logger.error(
+                    "sync_planner: '%s' appears twice in the source",
+                    pair.external_id,
+                )
                 msg = f"Duplicate external_id in source: '{pair.external_id}'."
                 raise DuplicateExternalIdError(msg)
             seen.add(pair.external_id)
@@ -46,6 +54,16 @@ class SyncPlanner(BaseDomainService):
                 skipped.append(pair.external_id)
 
         to_delete = [external_id for external_id in current if external_id not in seen]
+        logger.info(
+            "sync_planner: %d desired vs %d indexed -> "
+            "create=%d update=%d delete=%d skip=%d",
+            len(desired),
+            len(current),
+            len(to_create),
+            len(to_update),
+            len(to_delete),
+            len(skipped),
+        )
 
         return SyncPlan(
             to_create=tuple(to_create),

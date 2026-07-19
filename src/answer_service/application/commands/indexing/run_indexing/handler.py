@@ -1,3 +1,4 @@
+import logging
 from typing import TYPE_CHECKING, Final, override
 
 from answer_service.application.commands.indexing.run_indexing.command import (
@@ -34,6 +35,9 @@ if TYPE_CHECKING:
     )
 
 
+logger: Final[logging.Logger] = logging.getLogger(__name__)
+
+
 class RunIndexingHandler(CommandHandler[RunIndexingCommand, None]):
     """Executes a sync run against the catalog (the search stores follow via events).
 
@@ -64,22 +68,41 @@ class RunIndexingHandler(CommandHandler[RunIndexingCommand, None]):
 
     @override
     async def handle(self, command: RunIndexingCommand) -> None:
+        logger.info("run_indexing: starting task %s", command.task_id)
+
         task = await self._task_gateway.read_by_id(command.task_id)
         if task is None:
+            logger.warning("run_indexing: task %s not found", command.task_id)
             msg = f"Indexing task '{command.task_id}' not found."
             raise IndexingTaskNotFoundError(msg)
 
         stats = await self._run_sync(task.source)
         task.complete(stats)
         await self._task_gateway.update(task)
+        logger.info(
+            "run_indexing: task %s completed, created=%d updated=%d deleted=%d",
+            command.task_id,
+            stats.created,
+            stats.updated,
+            stats.deleted,
+        )
 
     async def _run_sync(self, source: SourceReference) -> SyncStats:
         content = await self._source_storage.open(source)
         rows = await self._source_reader.read_rows(content=content)
         desired = [self._to_desired_pair(row) for row in rows]
+        logger.info("run_indexing: read %d row(s) from %s", len(desired), source)
 
         manifest = await self._catalog_query.read_fingerprints()
+        logger.info("run_indexing: catalog holds %d pair(s)", len(manifest))
+
         plan = self._sync_planner.plan(desired=desired, current=manifest)
+        logger.info(
+            "run_indexing: plan is create=%d update=%d delete=%d",
+            len(plan.to_create),
+            len(plan.to_update),
+            len(plan.to_delete),
+        )
 
         await self._apply(plan)
         return plan.stats()
@@ -103,6 +126,7 @@ class RunIndexingHandler(CommandHandler[RunIndexingCommand, None]):
                 continue
             existing.mark_removed()
             await self._catalog_command.delete_by_id(external_id)
+            logger.debug("run_indexing: deleted '%s'", external_id)
 
         for pair in plan.to_create:
             created = self._qa_pair_factory.create(
@@ -111,6 +135,7 @@ class RunIndexingHandler(CommandHandler[RunIndexingCommand, None]):
                 source_updated_at=pair.source_updated_at,
             )
             await self._catalog_command.add(created)
+            logger.debug("run_indexing: created '%s'", pair.external_id)
 
         for pair in plan.to_update:
             existing = await self._catalog_command.read_by_id(pair.external_id)
@@ -121,3 +146,4 @@ class RunIndexingHandler(CommandHandler[RunIndexingCommand, None]):
                 source_updated_at=pair.source_updated_at,
             )
             await self._catalog_command.update(existing)
+            logger.debug("run_indexing: updated '%s'", pair.external_id)

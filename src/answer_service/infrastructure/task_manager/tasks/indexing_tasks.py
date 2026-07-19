@@ -45,13 +45,18 @@ async def run_indexing_task(
     enqueues a new task.
     """
     task_id = TaskId(payload.body.task_id)
+    logger.info(
+        "run_indexing_task: picked up task %s from message %s",
+        task_id,
+        payload.message_id,
+    )
 
     await sender.send(MarkIndexingRunningCommand(task_id=task_id))
 
     try:
         await sender.send(RunIndexingCommand(task_id=task_id))
     except AppError as error:
-        logger.exception("run_indexing: task %s failed", task_id)
+        logger.exception("run_indexing_task: task %s failed", task_id)
         await sender.send(
             MarkIndexingFailedCommand(
                 task_id=task_id,
@@ -59,6 +64,9 @@ async def run_indexing_task(
                 message=str(error),
             ),
         )
+        return
+
+    logger.info("run_indexing_task: task %s finished", task_id)
 
 
 def setup_indexing_tasks(broker: AsyncBroker) -> None:

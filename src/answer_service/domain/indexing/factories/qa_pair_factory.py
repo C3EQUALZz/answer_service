@@ -1,3 +1,4 @@
+import logging
 from typing import TYPE_CHECKING, Final, final
 
 from answer_service.domain.common.events_collection import EventsCollection
@@ -8,6 +9,9 @@ if TYPE_CHECKING:
 
     from answer_service.domain.indexing.value_objects.external_id import ExternalId
     from answer_service.domain.indexing.value_objects.qa_content import QAContent
+
+
+logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 
 @final
@@ -29,6 +33,7 @@ class QAPairFactory:
         content: QAContent,
         source_updated_at: datetime,
     ) -> QAPair:
+        logger.debug("qa_pair_factory: registering '%s'", external_id)
         return QAPair.register(
             external_id=external_id,
             content=content,

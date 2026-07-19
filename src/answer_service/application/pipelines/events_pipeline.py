@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Final, override
 
 from answer_service.application.common.mediator.handlers import (
@@ -7,6 +8,8 @@ from answer_service.application.common.mediator.handlers import (
 from answer_service.application.common.mediator.markers import Command
 from answer_service.application.common.ports.outbox.event_bus import EventBus
 from answer_service.domain.common.events_collection import EventsCollection
+
+logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 
 class EventsPipeline[TCommand: Command[Any], TResponse](
@@ -37,6 +40,15 @@ class EventsPipeline[TCommand: Command[Any], TResponse](
         handle_next: HandleNext[TCommand, TResponse],
     ) -> TResponse:
         response = await handle_next(request)
-        events = self._events_collection.pull_events()
+
+        events = list(self._events_collection.pull_events())
+        log = logger.info if events else logger.debug
+        log(
+            "events: %s produced %d event(s): %s",
+            type(request).__name__,
+            len(events),
+            [type(event).__name__ for event in events],
+        )
+
         await self._event_bus.publish(events)
         return response

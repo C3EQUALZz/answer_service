@@ -55,6 +55,7 @@ class SqlAlchemyOutboxGateway(OutboxCommandGateway):
         try:
             records = (await self._session.execute(stmt)).scalars().all()
         except SQLAlchemyError as e:
+            logger.exception("failed to read pending outbox messages")
             msg = "Failed to read pending outbox messages."
             raise RepoError(msg) from e
 
@@ -79,5 +80,6 @@ class SqlAlchemyOutboxGateway(OutboxCommandGateway):
         try:
             await self._session.execute(stmt)
         except SQLAlchemyError as e:
+            logger.exception("failed to mark the outbox message as processed")
             msg = "Failed to mark the outbox message as processed."
             raise RepoError(msg) from e

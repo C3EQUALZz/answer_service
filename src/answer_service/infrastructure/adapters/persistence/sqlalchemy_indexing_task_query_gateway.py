@@ -45,6 +45,7 @@ class SqlAlchemyIndexingTaskQueryGateway(IndexingTaskQueryGateway):
         try:
             row = (await self._session.execute(stmt)).one_or_none()
         except SQLAlchemyError as e:
+            logger.exception("failed to read the indexing task status")
             msg = "Failed to read the indexing task status."
             raise RepoError(msg) from e
 

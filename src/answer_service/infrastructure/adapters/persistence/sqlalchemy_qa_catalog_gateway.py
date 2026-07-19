@@ -41,6 +41,7 @@ class SqlAlchemyQACatalogGateway(QACatalogCommandGateway, QACatalogQueryGateway)
 
     @override
     async def add(self, pair: QAPair) -> None:
+        logger.debug("qa_catalog: staging '%s' for insert", pair.id)
         self._session.add(pair)
 
     @override
@@ -49,8 +50,15 @@ class SqlAlchemyQACatalogGateway(QACatalogCommandGateway, QACatalogQueryGateway)
         try:
             pair = (await self._session.execute(stmt)).scalar_one_or_none()
         except SQLAlchemyError as e:
+            logger.exception("qa_catalog: failed to read '%s'", external_id)
             msg = "Failed to read the QA pair."
             raise RepoError(msg) from e
+
+        logger.debug(
+            "qa_catalog: '%s' %s",
+            external_id,
+            "found" if pair is not None else "not found",
+        )
         return self._inject(pair) if pair is not None else None
 
     @override
@@ -70,8 +78,11 @@ class SqlAlchemyQACatalogGateway(QACatalogCommandGateway, QACatalogQueryGateway)
         try:
             await self._session.execute(stmt)
         except SQLAlchemyError as e:
+            logger.exception("qa_catalog: failed to delete '%s'", external_id)
             msg = "Failed to delete the QA pair."
             raise RepoError(msg) from e
+
+        logger.debug("qa_catalog: deleted '%s'", external_id)
 
     @override
     async def read_fingerprints(self) -> dict[ExternalId, ContentHash]:
@@ -89,6 +100,7 @@ class SqlAlchemyQACatalogGateway(QACatalogCommandGateway, QACatalogQueryGateway)
         try:
             rows = (await self._session.execute(stmt)).all()
         except SQLAlchemyError as e:
+            logger.exception("failed to read the catalog fingerprints")
             msg = "Failed to read the catalog fingerprints."
             raise RepoError(msg) from e
 
@@ -127,6 +139,7 @@ class SqlAlchemyQACatalogGateway(QACatalogCommandGateway, QACatalogQueryGateway)
         try:
             rows = (await self._session.execute(stmt)).all()
         except SQLAlchemyError as e:
+            logger.exception("failed to read the ranked qa pairs")
             msg = "Failed to read the ranked QA pairs."
             raise RepoError(msg) from e
 
@@ -153,6 +166,7 @@ class SqlAlchemyQACatalogGateway(QACatalogCommandGateway, QACatalogQueryGateway)
             total = (await self._session.execute(total_stmt)).scalar_one()
             rows = (await self._session.execute(per_category_stmt)).all()
         except SQLAlchemyError as e:
+            logger.exception("failed to read the catalog statistics")
             msg = "Failed to read the catalog statistics."
             raise RepoError(msg) from e
 

@@ -35,6 +35,8 @@ class UpsertQAPairHandler(CommandHandler[UpsertQAPairCommand, None]):
 
     @override
     async def handle(self, command: UpsertQAPairCommand) -> None:
+        logger.info("upsert_qa_pair: projecting '%s'", command.external_id)
+
         pair = await self._catalog.read_by_id(command.external_id)
         if pair is None:
             logger.debug(
@@ -44,6 +46,11 @@ class UpsertQAPairHandler(CommandHandler[UpsertQAPairCommand, None]):
             return
 
         await self._index_writer.upsert([self._to_document(pair)])
+        logger.info(
+            "upsert_qa_pair: '%s' (category '%s') is in the index",
+            command.external_id,
+            pair.content.category.value,
+        )
 
     @staticmethod
     def _to_document(pair: QAPair) -> IndexDocument:

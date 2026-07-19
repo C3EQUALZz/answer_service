@@ -57,6 +57,7 @@ class SqlAlchemyAnalyticsGateway(AnalyticsCommandGateway, AnalyticsQueryGateway)
         try:
             row = (await self._session.execute(stmt)).one()
         except SQLAlchemyError as e:
+            logger.exception("failed to read query statistics")
             msg = "Failed to read query statistics."
             raise RepoError(msg) from e
 

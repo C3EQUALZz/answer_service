@@ -1,3 +1,4 @@
+import logging
 from typing import Final, override
 
 from answer_service.application.common.mediator.handlers import QueryHandler
@@ -6,6 +7,8 @@ from answer_service.application.queries.search.search_qa_pairs.query import (
     SearchQAPairsQuery,
     SearchQAPairsResponse,
 )
+
+logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 
 class SearchQAPairsHandler(
@@ -23,7 +26,30 @@ class SearchQAPairsHandler(
 
     @override
     async def handle(self, query: SearchQAPairsQuery) -> SearchQAPairsResponse:
-        return SearchQAPairsResponse(
-            query=query.criteria.query,
-            hits=await self._hybrid_search.search(query.criteria),
+        logger.info(
+            "search_qa_pairs: query '%s', top_k=%d, category=%s",
+            query.criteria.query.content,
+            query.criteria.top_k.value,
+            query.criteria.category,
         )
+
+        hits = await self._hybrid_search.search(query.criteria)
+        response = SearchQAPairsResponse(query=query.criteria.query, hits=hits)
+
+        logger.info(
+            "search_qa_pairs: '%s' returned %d hit(s), top_score=%s",
+            query.criteria.query.content,
+            response.results_count,
+            response.top_score,
+        )
+        for hit in hits:
+            logger.debug(
+                "search_qa_pairs: #%d '%s' final=%.4f dense=%s lexical=%s",
+                hit.result.rank,
+                hit.pair.external_id,
+                hit.result.scores.final.value,
+                hit.result.scores.dense,
+                hit.result.scores.lexical,
+            )
+
+        return response

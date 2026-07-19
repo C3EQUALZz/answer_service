@@ -1,3 +1,4 @@
+import logging
 from typing import TYPE_CHECKING, Final, final
 
 from answer_service.domain.analytics.entities.query_log import QueryLog
@@ -11,6 +12,9 @@ if TYPE_CHECKING:
     from answer_service.domain.analytics.value_objects.query_kind import QueryKind
     from answer_service.domain.analytics.value_objects.query_outcome import QueryOutcome
     from answer_service.domain.analytics.value_objects.query_text import QueryText
+
+
+logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 
 @final
@@ -33,7 +37,7 @@ class QueryLogFactory:
         latency: Latency,
         category: CategoryLabel | None = None,
     ) -> QueryLog:
-        return QueryLog(
+        log = QueryLog(
             id=self._query_log_id_generator(),
             text=text,
             kind=kind,
@@ -41,3 +45,10 @@ class QueryLogFactory:
             latency=latency,
             category=category,
         )
+        logger.debug(
+            "query_log_factory: created %s for a %s query with %d result(s)",
+            log.id,
+            kind.value,
+            outcome.results_count,
+        )
+        return log

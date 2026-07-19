@@ -52,11 +52,16 @@ class TaskIQTaskScheduler(TaskScheduler):
 
         task = self._broker.get_all_tasks().get(task_name)
         if task is None:
+            logger.error(
+                "scheduler: no task registered for '%s', cannot schedule %s",
+                task_name,
+                task_id,
+            )
             msg = f"No task registered for '{task_name}'."
             raise UnregisteredTaskError(msg)
 
         await task.kicker().with_task_id(task_id).kiq(payload)
-        logger.info("Scheduled task %s", task_id)
+        logger.info("scheduler: scheduled %s as task %s", task_name, task_id)
 
     @override
     async def read_task_info(self, task_id: TaskID) -> TaskInfo | None:
@@ -64,8 +69,10 @@ class TaskIQTaskScheduler(TaskScheduler):
             TaskProgress[str] | None
         ) = await self._broker.result_backend.get_progress(task_id)
         if progress is None:
+            logger.debug("scheduler: no progress recorded for %s", task_id)
             return None
 
+        logger.debug("scheduler: %s is at state %s", task_id, progress.state)
         return TaskInfo(
             task_id=task_id,
             status=TASK_STATUSES.get(progress.state, TaskInfoStatus.STARTED),

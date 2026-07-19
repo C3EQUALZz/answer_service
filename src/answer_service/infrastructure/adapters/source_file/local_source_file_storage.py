@@ -37,19 +37,34 @@ class LocalSourceFileStorage(SourceFileStorage):
         try:
             await asyncio.to_thread(self._write, target, content)
         except OSError as e:
+            logger.exception("source_storage: failed to stage '%s'", filename)
             msg = f"Failed to stage the uploaded file '{filename}'."
             raise SourceFileStorageError(msg) from e
 
-        logger.debug("Staged upload %s as %s", filename, target)
+        logger.info(
+            "source_storage: staged '%s' as %s (%d bytes)",
+            filename,
+            target,
+            len(content),
+        )
         return SourceReference(value=str(target))
 
     @override
     async def open(self, reference: SourceReference) -> bytes:
+        logger.debug("source_storage: opening %s", reference.value)
         try:
-            return await asyncio.to_thread(Path(reference.value).read_bytes)
+            content = await asyncio.to_thread(Path(reference.value).read_bytes)
         except OSError as e:
+            logger.exception("source_storage: failed to read %s", reference.value)
             msg = f"Failed to read the staged file '{reference.value}'."
             raise SourceFileStorageError(msg) from e
+
+        logger.debug(
+            "source_storage: read %d bytes from %s",
+            len(content),
+            reference.value,
+        )
+        return content
 
     def _write(self, target: Path, content: bytes) -> None:
         self._directory.mkdir(parents=True, exist_ok=True)

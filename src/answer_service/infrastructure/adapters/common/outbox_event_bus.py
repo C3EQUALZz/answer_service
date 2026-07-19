@@ -36,8 +36,16 @@ class OutboxEventBus(EventBus):
 
     @override
     async def publish(self, events: Iterable[Event]) -> None:
-        logger.info("Started publishing outbox events: %s", events)
-
+        written = 0
         for event in events:
             message = self._event_serializer.serialize(event)
             await self._outbox_command_gateway.add(message)
+            written += 1
+            logger.debug(
+                "outbox_bus: wrote %s as message %s",
+                message.event_type,
+                message.id,
+            )
+
+        log = logger.info if written else logger.debug
+        log("outbox_bus: wrote %d event(s) to the outbox", written)

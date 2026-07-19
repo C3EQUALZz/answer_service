@@ -34,6 +34,7 @@ class SqlAlchemyIndexingTaskGateway(IndexingTaskCommandGateway):
         try:
             task = (await self._session.execute(stmt)).scalar_one_or_none()
         except SQLAlchemyError as e:
+            logger.exception("failed to read the indexing task")
             msg = "Failed to read the indexing task."
             raise RepoError(msg) from e
         return self._inject(task) if task is not None else None
@@ -48,6 +49,7 @@ class SqlAlchemyIndexingTaskGateway(IndexingTaskCommandGateway):
         try:
             await self._session.execute(stmt)
         except SQLAlchemyError as e:
+            logger.exception("failed to delete the indexing task")
             msg = "Failed to delete the indexing task."
             raise RepoError(msg) from e
 

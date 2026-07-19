@@ -47,13 +47,22 @@ class LangChainAnswerGenerator(AnswerGenerator):
             HumanMessage(content=self._prompt(question, grounding)),
         ]
 
+        logger.info(
+            "answer_generator: asking the model '%s' with %d grounding pair(s)",
+            question,
+            len(grounding),
+        )
+
         try:
             response = await self._chat_model.ainvoke(messages)
         except Exception as e:
+            logger.exception("answer_generator: the model failed on '%s'", question)
             msg = "The chat model failed to generate an answer."
             raise AnswerGenerationError(msg) from e
 
-        return AnswerText(content=self._text_of(response.content))
+        content = self._text_of(response.content)
+        logger.info("answer_generator: the model answered '%s'", content)
+        return AnswerText(content=content)
 
     @staticmethod
     def _prompt(question: str, grounding: Sequence[QAPairView]) -> str:

@@ -23,6 +23,7 @@ class SqlAlchemyTransactionManager(TransactionManager):
         try:
             await self._session.flush()
         except SQLAlchemyError as e:
+            logger.exception("failed to flush the session")
             msg = "Failed to flush the session."
             raise RepoError(msg) from e
 
@@ -31,6 +32,7 @@ class SqlAlchemyTransactionManager(TransactionManager):
         try:
             await self._session.commit()
         except SQLAlchemyError as e:
+            logger.exception("failed to commit the transaction")
             msg = "Failed to commit the transaction."
             raise RepoError(msg) from e
 
@@ -39,5 +41,6 @@ class SqlAlchemyTransactionManager(TransactionManager):
         try:
             await self._session.rollback()
         except SQLAlchemyError as e:
+            logger.exception("failed to roll back the transaction")
             msg = "Failed to roll back the transaction."
             raise RepoError(msg) from e
