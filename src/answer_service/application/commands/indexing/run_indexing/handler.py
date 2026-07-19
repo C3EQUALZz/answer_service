@@ -10,22 +10,18 @@ from answer_service.application.common.ports.gateways import (
     QACatalogCommandGateway,
     QACatalogQueryGateway,
 )
+from answer_service.application.common.ports.mappers.source_row_mapper import (
+    SourceRowMapper,
+)
 from answer_service.application.common.ports.source_file.source_file_reader import (
     SourceFileReader,
 )
 from answer_service.application.common.ports.source_file.source_file_storage import (
     SourceFileStorage,
 )
-from answer_service.application.common.ports.source_file.source_row import SourceRow
 from answer_service.application.error import IndexingTaskNotFoundError
 from answer_service.domain.indexing.factories.qa_pair_factory import QAPairFactory
 from answer_service.domain.indexing.services.sync_planner import SyncPlanner
-from answer_service.domain.indexing.value_objects.answer import Answer
-from answer_service.domain.indexing.value_objects.category import Category
-from answer_service.domain.indexing.value_objects.desired_pair import DesiredPair
-from answer_service.domain.indexing.value_objects.external_id import ExternalId
-from answer_service.domain.indexing.value_objects.qa_content import QAContent
-from answer_service.domain.indexing.value_objects.question import Question
 from answer_service.domain.indexing.value_objects.sync_plan import SyncPlan
 from answer_service.domain.indexing.value_objects.sync_stats import SyncStats
 
@@ -57,6 +53,7 @@ class RunIndexingHandler(CommandHandler[RunIndexingCommand, None]):
         catalog_query: QACatalogQueryGateway,
         qa_pair_factory: QAPairFactory,
         sync_planner: SyncPlanner,
+        source_row_mapper: SourceRowMapper,
     ) -> None:
         self._task_gateway: Final[IndexingTaskCommandGateway] = task_gateway
         self._source_storage: Final[SourceFileStorage] = source_storage
@@ -65,6 +62,7 @@ class RunIndexingHandler(CommandHandler[RunIndexingCommand, None]):
         self._catalog_query: Final[QACatalogQueryGateway] = catalog_query
         self._qa_pair_factory: Final[QAPairFactory] = qa_pair_factory
         self._sync_planner: Final[SyncPlanner] = sync_planner
+        self._source_row_mapper: Final[SourceRowMapper] = source_row_mapper
 
     @override
     async def handle(self, command: RunIndexingCommand) -> None:
@@ -90,7 +88,7 @@ class RunIndexingHandler(CommandHandler[RunIndexingCommand, None]):
     async def _run_sync(self, source: SourceReference) -> SyncStats:
         content = await self._source_storage.open(source)
         rows = await self._source_reader.read_rows(content=content)
-        desired = [self._to_desired_pair(row) for row in rows]
+        desired = [self._source_row_mapper.to_desired_pair(row) for row in rows]
         logger.info("run_indexing: read %d row(s) from %s", len(desired), source)
 
         manifest = await self._catalog_query.read_fingerprints()
@@ -106,18 +104,6 @@ class RunIndexingHandler(CommandHandler[RunIndexingCommand, None]):
 
         await self._apply(plan)
         return plan.stats()
-
-    @staticmethod
-    def _to_desired_pair(row: SourceRow) -> DesiredPair:
-        return DesiredPair(
-            external_id=ExternalId(value=row.external_id),
-            content=QAContent(
-                question=Question(content=row.question),
-                answer=Answer(content=row.answer),
-                category=Category(value=row.category),
-            ),
-            source_updated_at=row.updated_at,
-        )
 
     async def _apply(self, plan: SyncPlan) -> None:
         for external_id in plan.to_delete:

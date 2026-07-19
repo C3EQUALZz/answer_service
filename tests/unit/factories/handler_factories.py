@@ -36,6 +36,10 @@ from answer_service.domain.indexing.factories.indexing_task_factory import (
 from answer_service.domain.indexing.factories.qa_pair_factory import QAPairFactory
 from answer_service.domain.indexing.services.sync_planner import SyncPlanner
 from answer_service.domain.search.services.rrf_fusion import RrfFusion
+from answer_service.infrastructure.mappers import (
+    AdaptixQAPairDocumentMapper,
+    AdaptixSourceRowMapper,
+)
 from tests.unit.stubs.gateways import (
     InMemoryIndexingTaskGateway,
     InMemoryOutboxGateway,
@@ -71,6 +75,7 @@ def create_run_indexing_handler(
         catalog_query=catalog,
         qa_pair_factory=qa_pair_factory,
         sync_planner=sync_planner,
+        source_row_mapper=AdaptixSourceRowMapper(),
     )
 
 
@@ -114,7 +119,7 @@ def create_upsert_qa_pair_handler(
     catalog: InMemoryQACatalog,
     index_writer: RecordingSearchIndexWriter,
 ) -> UpsertQAPairHandler:
-    return UpsertQAPairHandler(catalog, index_writer)
+    return UpsertQAPairHandler(catalog, index_writer, AdaptixQAPairDocumentMapper())
 
 
 def create_hybrid_search(

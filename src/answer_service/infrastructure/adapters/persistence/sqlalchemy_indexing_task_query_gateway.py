@@ -1,7 +1,7 @@
 import logging
-from typing import TYPE_CHECKING, Any, Final, override
+from typing import TYPE_CHECKING, Final, override
 
-from sqlalchemy import Row, select
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +10,9 @@ from answer_service.application.common.ports.gateways import (
     IndexingTaskView,
 )
 from answer_service.infrastructure.errors import RepoError
+from answer_service.infrastructure.mappers.indexing_task_view_mapper import (
+    IndexingTaskViewMapper,
+)
 from answer_service.infrastructure.persistence.models import indexing_tasks_table
 
 if TYPE_CHECKING:
@@ -26,8 +29,13 @@ class SqlAlchemyIndexingTaskQueryGateway(IndexingTaskQueryGateway):
     something writable.
     """
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        view_mapper: IndexingTaskViewMapper,
+    ) -> None:
         self._session: Final[AsyncSession] = session
+        self._view_mapper: Final[IndexingTaskViewMapper] = view_mapper
 
     @override
     async def read_by_id(self, task_id: TaskId) -> IndexingTaskView | None:
@@ -49,23 +57,4 @@ class SqlAlchemyIndexingTaskQueryGateway(IndexingTaskQueryGateway):
             msg = "Failed to read the indexing task status."
             raise RepoError(msg) from e
 
-        return self._to_view(row) if row is not None else None
-
-    @staticmethod
-    def _to_view(row: Row[Any]) -> IndexingTaskView:
-        stats = row.stats
-        failure = row.failure
-        return IndexingTaskView(
-            task_id=row.id,
-            status=row.status,
-            source=str(row.source),
-            created_at=row.created_at,
-            started_at=row.started_at,
-            finished_at=row.finished_at,
-            created=stats.created,
-            updated=stats.updated,
-            deleted=stats.deleted,
-            skipped=stats.skipped,
-            failure_code=failure.code if failure is not None else None,
-            failure_message=failure.message if failure is not None else None,
-        )
+        return self._view_mapper.to_view(row) if row is not None else None

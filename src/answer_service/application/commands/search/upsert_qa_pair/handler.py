@@ -6,11 +6,10 @@ from answer_service.application.commands.search.upsert_qa_pair.command import (
 )
 from answer_service.application.common.mediator.handlers import CommandHandler
 from answer_service.application.common.ports.gateways import QACatalogCommandGateway
-from answer_service.application.common.ports.search import (
-    IndexDocument,
-    SearchIndexWriter,
+from answer_service.application.common.ports.mappers.qa_pair_document_mapper import (
+    QAPairDocumentMapper,
 )
-from answer_service.domain.indexing.entities.qa_pair import QAPair
+from answer_service.application.common.ports.search import SearchIndexWriter
 
 logger: Final[logging.Logger] = logging.getLogger(__name__)
 
@@ -29,9 +28,11 @@ class UpsertQAPairHandler(CommandHandler[UpsertQAPairCommand, None]):
         self,
         catalog: QACatalogCommandGateway,
         index_writer: SearchIndexWriter,
+        document_mapper: QAPairDocumentMapper,
     ) -> None:
         self._catalog: Final[QACatalogCommandGateway] = catalog
         self._index_writer: Final[SearchIndexWriter] = index_writer
+        self._document_mapper: Final[QAPairDocumentMapper] = document_mapper
 
     @override
     async def handle(self, command: UpsertQAPairCommand) -> None:
@@ -45,18 +46,9 @@ class UpsertQAPairHandler(CommandHandler[UpsertQAPairCommand, None]):
             )
             return
 
-        await self._index_writer.upsert([self._to_document(pair)])
+        await self._index_writer.upsert([self._document_mapper.to_document(pair)])
         logger.info(
             "upsert_qa_pair: '%s' (category '%s') is in the index",
             command.external_id,
             pair.content.category.value,
-        )
-
-    @staticmethod
-    def _to_document(pair: QAPair) -> IndexDocument:
-        return IndexDocument(
-            external_id=pair.id,
-            question=pair.content.question.content,
-            answer=pair.content.answer.content,
-            category=pair.content.category.value,
         )

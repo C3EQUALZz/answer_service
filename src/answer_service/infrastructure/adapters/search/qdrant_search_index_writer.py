@@ -9,6 +9,9 @@ from answer_service.application.common.ports.search import (
     SearchIndexWriter,
 )
 from answer_service.infrastructure.errors import SearchIndexError
+from answer_service.infrastructure.mappers.index_metadata_mapper import (
+    IndexMetadataMapper,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -38,8 +41,13 @@ class QdrantSearchIndexWriter(SearchIndexWriter):
     application hands over text and never sees a vector.
     """
 
-    def __init__(self, vector_store: QdrantVectorStore) -> None:
+    def __init__(
+        self,
+        vector_store: QdrantVectorStore,
+        metadata_mapper: IndexMetadataMapper,
+    ) -> None:
         self._vector_store: Final[QdrantVectorStore] = vector_store
+        self._metadata_mapper: Final[IndexMetadataMapper] = metadata_mapper
 
     @override
     async def upsert(self, documents: Sequence[IndexDocument]) -> None:
@@ -50,13 +58,7 @@ class QdrantSearchIndexWriter(SearchIndexWriter):
             await self._vector_store.aadd_texts(
                 texts=[self._embeddable_text(document) for document in documents],
                 metadatas=[
-                    {
-                        "external_id": document.external_id.value,
-                        "category": document.category,
-                        "question": document.question,
-                        "answer": document.answer,
-                    }
-                    for document in documents
+                    self._metadata_mapper.to_metadata(document) for document in documents
                 ],
                 ids=[point_id_of(document.external_id) for document in documents],
             )

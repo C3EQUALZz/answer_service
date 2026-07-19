@@ -3,6 +3,7 @@ from .database_provider import database_provider
 from .domain_provider import domain_provider
 from .gateways_provider import gateways_provider
 from .handlers_provider import handlers_provider
+from .mappers_provider import mappers_provider
 from .mediator_provider import make_registry, mediator_provider
 from .pipelines_provider import pipelines_provider
 from .services_provider import services_provider
@@ -16,6 +17,7 @@ __all__ = [
     "gateways_provider",
     "handlers_provider",
     "make_registry",
+    "mappers_provider",
     "mediator_provider",
     "pipelines_provider",
     "services_provider",
