@@ -71,7 +71,6 @@ def create_fastapi_app() -> FastAPI:  # pragma: no cover
         lifespan=lifespan,
         title="answer_service",
         version=__version__,
-        root_path="/api",
         debug=configs.asgi.fastapi_debug,
     )
     app.state.task_manager = task_manager
