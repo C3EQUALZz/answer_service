@@ -19,6 +19,8 @@ class RedisConfig:
     Attributes:
         host: Redis server hostname or IP address.
         port: Redis server port.
+        user: ACL username. Empty falls back to the ``default`` user, which
+            carries every permission — name a scoped user in production.
         password: Password, empty when the server requires no auth.
         worker_db: Database index for the taskiq result backend.
         schedule_source_db: Database index for the taskiq schedule source.
@@ -32,6 +34,7 @@ class RedisConfig:
 
     host: str
     port: int
+    user: str = ""
     password: str = ""
     worker_db: int = 1
     schedule_source_db: int = 2
@@ -53,5 +56,14 @@ class RedisConfig:
         return self._uri(self.cache_db)
 
     def _uri(self, db: int) -> str:
-        credentials = f":{self.password}@" if self.password else ""
-        return f"{REDIS_SCHEME}://{credentials}{self.host}:{self.port}/{db}"
+        """Builds one database's URI.
+
+        The username is omitted when unset so the server applies ``default``;
+        sending an empty username would be rejected outright rather than
+        falling back.
+        """
+        if not self.password:
+            return f"{REDIS_SCHEME}://{self.host}:{self.port}/{db}"
+        return (
+            f"{REDIS_SCHEME}://{self.user}:{self.password}@{self.host}:{self.port}/{db}"
+        )

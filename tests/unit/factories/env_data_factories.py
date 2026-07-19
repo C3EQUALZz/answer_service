@@ -67,6 +67,7 @@ def redis_env(**overrides: str) -> dict[str, str]:
     return {
         "REDIS_HOST": "localhost",
         "REDIS_PORT": "6379",
+        "REDIS_USER": "",
         "REDIS_PASSWORD": "",
         "REDIS_WORKER_DB": "1",
         "REDIS_SCHEDULE_SOURCE_DB": "2",

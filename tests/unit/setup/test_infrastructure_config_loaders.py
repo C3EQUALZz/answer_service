@@ -81,6 +81,32 @@ def test_redis_includes_the_password_when_set() -> None:
     assert config.worker_uri == "redis://:s3cr3t@localhost:6379/1"
 
 
+def test_redis_names_the_acl_user_when_one_is_set() -> None:
+    """Without the username the server applies `default`, which has +@all."""
+    stub = redis_source_stub(REDIS_USER="app", REDIS_PASSWORD="s3cr3t")
+
+    config = RedisConfigLoader(stub).load()
+
+    assert config.worker_uri == "redis://app:s3cr3t@localhost:6379/1"
+
+
+def test_redis_rejects_a_user_without_a_password() -> None:
+    """An ACL user with no password silently degrades to an anonymous connect."""
+    with pytest.raises(DatureConfigError) as excinfo:
+        RedisConfigLoader(redis_source_stub(REDIS_USER="app")).load()
+
+    assert "REDIS_USER requires REDIS_PASSWORD" in render_exception(excinfo.value)
+
+
+def test_redis_password_is_masked_in_error_output() -> None:
+    stub = redis_source_stub(REDIS_PASSWORD="TOP-SECRET-VALUE", REDIS_PORT="999999")
+
+    with pytest.raises(DatureConfigError) as excinfo:
+        RedisConfigLoader(stub).load()
+
+    assert "TOP-SECRET-VALUE" not in render_exception(excinfo.value)
+
+
 @pytest.mark.parametrize("db_index", ("-1", "16"))
 def test_redis_rejects_a_database_index_outside_the_valid_range(db_index: str) -> None:
     with pytest.raises(DatureConfigError) as excinfo:

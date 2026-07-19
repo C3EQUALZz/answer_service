@@ -18,6 +18,7 @@ class RedisEnvSourceFactory(SourceFactory):
             field_mapping={
                 F[RedisConfig].host: "REDIS_HOST",
                 F[RedisConfig].port: "REDIS_PORT",
+                F[RedisConfig].user: "REDIS_USER",
                 F[RedisConfig].password: "REDIS_PASSWORD",
                 F[RedisConfig].worker_db: "REDIS_WORKER_DB",
                 F[RedisConfig].schedule_source_db: "REDIS_SCHEDULE_SOURCE_DB",

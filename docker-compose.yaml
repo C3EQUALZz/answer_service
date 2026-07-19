@@ -29,8 +29,19 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-answer_service}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-answer_service}
       POSTGRES_DB: ${POSTGRES_DB:-answer_service}
+      # Applies to the initial cluster only; pg_hba.conf governs afterwards.
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
     ports: ["5432:5432"]
-    volumes: [postgres-data:/var/lib/postgresql/data]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./deploy/prod/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./deploy/prod/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-answer_service}"]
       interval: 5s
@@ -39,11 +50,17 @@ services:
     restart: unless-stopped
 
   nats:
-    # JetStream is off by default, and the broker is pull-based JetStream.
+    # JetStream and the credentials both come from nats.conf, which the server
+    # expands $NATS_USER / $NATS_PASSWORD into at startup.
     image: nats:2.12-alpine
-    command: ["--jetstream", "--store_dir=/data", "--http_port=8222"]
+    command: ["--config", "/etc/nats/nats.conf"]
+    environment:
+      NATS_USER: ${NATS_USER:-answer_service}
+      NATS_PASSWORD: ${NATS_PASSWORD:?NATS_PASSWORD must be set}
     ports: ["4222:4222", "8222:8222"]
-    volumes: [nats-data:/data]
+    volumes:
+      - nats-data:/data
+      - ./deploy/prod/nats/nats.conf:/etc/nats/nats.conf:ro
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
       interval: 5s
@@ -53,20 +70,42 @@ services:
 
   redis:
     image: redis:8-alpine
-    command: ["redis-server", "--appendonly", "yes"]
+    entrypoint: ["/usr/local/bin/redis_entrypoint.sh"]
+    environment:
+      REDIS_DEFAULT_PASSWORD: ${REDIS_DEFAULT_PASSWORD:?REDIS_DEFAULT_PASSWORD must be set}
+      REDIS_USER: ${REDIS_USER:-answer_service}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
     ports: ["6379:6379"]
-    volumes: [redis-data:/data]
+    volumes:
+      - redis-data:/data
+      - ./deploy/prod/redis/redis_entrypoint.sh:/usr/local/bin/redis_entrypoint.sh:ro
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      # Authenticates as `default`: with an ACL in place a bare PING is denied,
+      # so an unauthenticated probe would report the server as unhealthy.
+      test:
+        - CMD-SHELL
+        - redis-cli --no-auth-warning -a "$$REDIS_DEFAULT_PASSWORD" ping | grep -q PONG
       interval: 5s
       timeout: 5s
       retries: 10
     restart: unless-stopped
 
   qdrant:
+    # Self-hosted Qdrant has no key of its own: whatever you put in
+    # QDRANT_API_KEY becomes the key, here on the server and in the client.
+    # Without it every collection is readable and writable by anyone who can
+    # reach the port.
     image: qdrant/qdrant:v1.16.1
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY must be set}
     ports: ["6333:6333", "6334:6334"]
     volumes: [qdrant-data:/qdrant/storage]
+    healthcheck:
+      test: ["CMD", "sh", "-c", "exec 3<>/dev/tcp/127.0.0.1/6333"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
     restart: unless-stopped
 
   migrations:

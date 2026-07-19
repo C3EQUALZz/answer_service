@@ -39,6 +39,13 @@ class RedisConfigLoader(ConfigLoader[RedisConfig]):
                 error_message=f"REDIS_PORT must be between {PORT_MIN} and {PORT_MAX}",
             ),
             V.root(
+                lambda c: not c.user or bool(c.password),
+                error_message=(
+                    "REDIS_USER requires REDIS_PASSWORD: an ACL user without a "
+                    "password cannot authenticate"
+                ),
+            ),
+            V.root(
                 lambda c: REDIS_DB_MIN <= c.worker_db <= REDIS_DB_MAX,
                 error_message=f"REDIS_WORKER_DB {db_range}",
             ),

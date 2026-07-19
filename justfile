@@ -93,25 +93,33 @@ ci: linter static-analysis test-ci
 docker-build:
   docker build -f deploy/prod/answer_service/Dockerfile -t answer-service:local .
 
+# --env-file is not optional: `env_file:` only injects variables into the
+# containers, while ${VAR:?} interpolation in the compose file itself reads the
+# project env file. Without it the credentials resolve empty.
 [doc("Start the local environment (postgres, nats, redis, qdrant, app)")]
 [group("docker")]
 up *params:
-  docker compose up -d {{params}}
+  docker compose --env-file .env.dev up -d {{params}}
 
 [doc("Start only the backing services, for running the app on the host")]
 [group("docker")]
 up-deps:
-  docker compose up -d postgres nats redis qdrant
+  docker compose --env-file .env.dev up -d postgres nats redis qdrant
 
 [doc("Stop the local environment")]
 [group("docker")]
 down *params:
-  docker compose down {{params}}
+  docker compose --env-file .env.dev down {{params}}
 
 [doc("Tail the logs of the application services")]
 [group("docker")]
 logs *params:
-  docker compose logs -f {{params}}
+  docker compose --env-file .env.dev logs -f {{params}}
+
+[doc("Validate the compose file against .env.dev")]
+[group("docker")]
+compose-config:
+  docker compose --env-file .env.dev config --quiet
 
 [doc("Pre-commit modified files")]
 [group("pre-commit")]
