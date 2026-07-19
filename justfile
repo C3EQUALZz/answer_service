@@ -105,6 +105,16 @@ up *params:
 up-deps:
   docker compose up -d postgres nats redis qdrant
 
+[doc("Start the dev backing services (throwaway defaults, no .env needed)")]
+[group("docker")]
+up-dev:
+  docker compose -f docker-compose.dev.yaml up -d
+
+[doc("Stop and remove the dev backing services and their volumes")]
+[group("docker")]
+down-dev:
+  docker compose -f docker-compose.dev.yaml down -v
+
 [doc("Stop the local environment")]
 [group("docker")]
 down *params:

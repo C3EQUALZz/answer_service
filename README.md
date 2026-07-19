@@ -30,7 +30,7 @@ pair whose content is unchanged is skipped.
 ### Indexing flow
 
 ```
-HTTP client  →  POST /v1/indexing/upload   (202 Accepted + task_id)
+HTTP client  →  POST /api/v1/index/sync    (202 Accepted + task_id)
                     │
               file validated, stored, IndexingTask queued
                     │
@@ -55,7 +55,7 @@ HTTP client  →  POST /v1/indexing/upload   (202 Accepted + task_id)
 ### Search flow
 
 ```
-HTTP client  →  POST /v1/search
+HTTP client  →  POST /api/v1/search
                     │
               QueryRecordingPipeline   ← starts the clock
                     │
@@ -93,11 +93,11 @@ the best match for its own query, which needs no recalibration at any size.
 ### Ask flow
 
 ```
-HTTP client  →  POST /v1/ask
+HTTP client  →  POST /api/v1/ask
                     │
               QueryRecordingPipeline
                     │
-              HybridSearchService   → the same retrieval /v1/search runs
+              HybridSearchService   → the same retrieval /api/v1/search runs
                     │
               nothing retrieved? ──→ answer: null, recorded as unanswered
                     │                 (the model is never called)
@@ -131,7 +131,7 @@ than in a second query, so a question is counted once in the statistics.
 | **TaskIQ + NATS**       | Background task queue (indexing, outbox relay, projection) |
 | **Redis**               | TaskIQ result backend and schedule source                  |
 | **dature**              | Type-safe configuration loading                            |
-| **Adaptix**             | Data mapper (event serialization)                          |
+| **Adaptix**             | Data mapper (event serialization and domain/DTO mapping)   |
 | **Alembic**             | Database schema migrations                                 |
 | **structlog**           | Structured logging                                         |
 | **uvicorn**             | ASGI server                                                |
@@ -185,7 +185,7 @@ than in a second query, so a question is counted once in the statistics.
   This is the actionable half: each entry is an FAQ entry worth writing.
 - **Hybrid ranking** — Reciprocal Rank Fusion combines the retrievers by rank,
   so their incompatible score scales never leak into the result.
-- **Grounded answers** — `/v1/ask` writes an answer only from pairs it actually
+- **Grounded answers** — `/api/v1/ask` writes an answer only from pairs it actually
   retrieved, cites them, and returns nothing at all when the catalog cannot
   ground one. An unanswerable question is a gap report entry, not an error.
 - **Journalling by pipeline** — every query that serves a user is recorded by a
@@ -201,28 +201,32 @@ than in a second query, so a question is counted once in the statistics.
 
 ## HTTP API
 
-All endpoints are served under `root_path="/api"`.
+Every versioned endpoint is served under `/api/v1`. Search and ask return a
+`request_id` — the id the query is journalled under — so a caller can look their
+own request up in `/api/v1/statistics/queries`, and a `duration_ms` measuring
+how long they waited.
 
 ### Indexing
 
-| Method | Path                           | Description                                     |
-|--------|--------------------------------|-------------------------------------------------|
-| `POST` | `/v1/indexing/upload`          | Upload a source file; returns `202` + `task_id` |
-| `GET`  | `/v1/indexing/tasks/{task_id}` | Poll the status of a synchronization run        |
+| Method | Path                       | Description                                     |
+|--------|----------------------------|-------------------------------------------------|
+| `POST` | `/api/v1/index/sync`       | Upload a source file; returns `202` + `task_id` |
+| `GET`  | `/api/v1/tasks/{task_id}`  | Poll the status of a synchronization run        |
 
 ### Search
 
-| Method | Path         | Description                                             |
-|--------|--------------|---------------------------------------------------------|
-| `POST` | `/v1/search` | Hybrid search over the catalog, ranked with scores      |
-| `POST` | `/v1/ask`    | An answer written from the catalog, with its sources    |
+| Method | Path            | Description                                          |
+|--------|-----------------|------------------------------------------------------|
+| `POST` | `/api/v1/search`| Hybrid search over the catalog, ranked with scores   |
+| `POST` | `/api/v1/ask`   | An answer written from the catalog, with its sources |
 
 ### Statistics
 
-| Method | Path                        | Description                                     |
-|--------|-----------------------------|-------------------------------------------------|
-| `GET`  | `/v1/statistics/`           | Catalog size and query usage over a period      |
-| `GET`  | `/v1/statistics/unanswered` | Queries the catalog could not answer, paginated |
+| Method | Path                            | Description                                       |
+|--------|---------------------------------|---------------------------------------------------|
+| `GET`  | `/api/v1/statistics`            | Catalog size and query usage over a period        |
+| `GET`  | `/api/v1/statistics/queries`    | The recorded search and ask requests, paginated   |
+| `GET`  | `/api/v1/statistics/unanswered` | Queries the catalog could not answer, paginated   |
 
 ### Common
 
@@ -308,9 +312,16 @@ run to completion first; the application services wait on them.
 ```sh
 just up          # everything
 just up-deps     # only the backing services, to run the app on the host
+just up-dev      # backing services with throwaway defaults, no .env needed
 just logs api
 just down
 ```
+
+`up-dev` uses `docker-compose.dev.yaml` — Postgres, NATS, Redis and Qdrant only,
+every credential defaulting to a throwaway value — so you can bring the
+dependencies up with no configuration and run the app itself on the host with
+`--reload`. It publishes the same ports the app expects, so it is a drop-in
+substitute for the full stack while developing.
 
 The API, the worker and the scheduler share one image
 (`deploy/prod/answer_service/Dockerfile`) and differ only in their command. They
@@ -346,6 +357,7 @@ QDRANT_API_KEY=
 QDRANT_COLLECTION_NAME=qa_pairs
 QDRANT_USE_HTTPS=false
 QDRANT_PREFER_GRPC=false
+QDRANT_TIMEOUT_SECONDS=10          # ceiling on a single Qdrant request
 
 # Mistral
 MISTRAL_API_KEY=...
@@ -354,6 +366,8 @@ MISTRAL_EMBEDDING_DIMENSION=1024
 MISTRAL_CHAT_MODEL=mistral-large-latest
 MISTRAL_TEMPERATURE=0.0
 MISTRAL_MAX_CONCURRENCY=5
+MISTRAL_EMBEDDING_TIMEOUT_SECONDS=30   # ceiling on one embedding request
+MISTRAL_CHAT_TIMEOUT_SECONDS=60        # ceiling on one chat completion
 
 # NATS
 NATS_HOST=localhost
@@ -400,7 +414,7 @@ FASTAPI_DEBUG=false
 >
 > `SEARCH_DENSE_SCORE_FLOOR` is the one setting here that no test can validate:
 > too high and the service silently refuses questions it could have answered.
-> Watch `unanswered_rate` on `/v1/statistics/` after changing it.
+> Watch `unanswered_rate` on `/api/v1/statistics` after changing it.
 
 ### Running the Services
 
@@ -666,6 +680,16 @@ in-memory stubs. Integration tests run against a real PostgreSQL started by
 testcontainers, with an in-process Qdrant and fake embeddings; they resolve
 **ports** from the container rather than naming concrete adapters, so the
 persistence technology can change without rewriting them.
+
+A third suite, `tests/quality`, measures retrieval against a **live** deployment
+— real embeddings, real Qdrant — over questions worded the way a person would
+word them, plus questions the catalog cannot answer and must refuse. It is
+marked `quality` and deselected by default; run it once a stack is up and the
+sample catalog is uploaded:
+
+```sh
+uv run pytest -m quality        # QUALITY_BASE_URL defaults to http://localhost:8080
+```
 
 ### Continuous Integration
 
