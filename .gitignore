@@ -170,3 +170,6 @@ src/answer_service/_version.py
 
 # CI coverage / test reports
 junit.xml
+
+# Excel owner-lock files, written next to an open workbook
+~$*
