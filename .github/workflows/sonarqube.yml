@@ -5,8 +5,13 @@ on:
     branches: [master]
   pull_request:
 
-# Organization and project key live in sonar-project.properties. Gated on the
-# ENABLE_SONAR variable because a secret cannot be referenced in a job `if`.
+# Organization and project key live in sonar-project.properties.
+#
+# The token lives in the `SONAR_TOKEN` environment, which is why this job
+# declares one. Nothing gates the job itself: a job-level `if` is evaluated
+# before the environment is resolved, so an environment variable read there is
+# always empty — which is exactly how this workflow spent 19 runs silently
+# skipping while appearing to be configured.
 permissions:
   contents: read
 
@@ -17,7 +22,9 @@ jobs:
   sonar:
     name: SonarQube
     runs-on: ubuntu-latest
-    if: ${{ vars.ENABLE_SONAR == 'true' }}
+    environment: SONAR_TOKEN
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
@@ -43,7 +50,9 @@ jobs:
           exit 1
       - name: Generate coverage (xml)
         run: just test-ci
+      # Guarded at step level, where secrets *are* readable: a fork or
+      # dependabot pull request has no access to the token, and should skip the
+      # upload rather than fail on an empty one.
       - name: SonarQube scan
+        if: ${{ env.SONAR_TOKEN != '' }}
         uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
