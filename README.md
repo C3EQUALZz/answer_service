@@ -49,26 +49,60 @@ HTTP client  →  POST /v1/indexing/upload   (202 Accepted + task_id)
               relay_outbox           → schedules one projection task per event
                     │
                     ▼
-              project_event          → SearchIndexWriter → Qdrant
+              upsert_qa_pair         → SearchIndexWriter → Qdrant
 ```
 
-### Search flow _(in progress)_
+### Search flow
 
 ```
 HTTP client  →  POST /v1/search
                     │
-          ┌─────────┴──────────┐
+              QueryRecordingPipeline   ← starts the clock
+                    │
+              HybridSearchService
+                    │
+          ┌─────────┴──────────┐       (concurrent)
           ▼                    ▼
    DenseRetriever        LexicalRetriever
-   (Qdrant vectors)      (PostgreSQL FTS)   ← not implemented yet
+   (Qdrant vectors)      (PostgreSQL FTS)
+   drops below            drops below
+   dense_score_floor      lexical_score_floor
           │                    │
           └─────────┬──────────┘
                     ▼
                RrfFusion            → one ranking, rank-based
                     │
                     ▼
-          RecordQueryCommand        → query log (statistics)
+          QACatalogQueryGateway     → joins the text, drops what is gone
+                    │
+                    ▼
+              QueryRecordingPipeline → query log (statistics, gap report)
 ```
+
+Each retriever drops its own weak matches before fusion. Fused scores are
+positional, so they carry no relevance signal — a floor applied after fusion
+could not tell a good match from a bad one, and the gap report would never fire.
+
+### Ask flow
+
+```
+HTTP client  →  POST /v1/ask
+                    │
+              QueryRecordingPipeline
+                    │
+              HybridSearchService   → the same retrieval /v1/search runs
+                    │
+              nothing retrieved? ──→ answer: null, recorded as unanswered
+                    │                 (the model is never called)
+                    ▼
+              AnswerGenerator       → Mistral, grounded in the retrieved pairs
+                    │
+                    ▼
+              GroundedAnswer        → refuses to exist without sources
+```
+
+One dispatch, not two: retrieval lives in a shared application service rather
+than in a second query, so a question is counted once in the statistics.
 
 ---
 
@@ -84,7 +118,7 @@ HTTP client  →  POST /v1/search
 | **SQLAlchemy asyncio**  | Async ORM for PostgreSQL, **imperative mapping**           |
 | **asyncpg**             | PostgreSQL async driver                                    |
 | **Qdrant**              | Vector store for QA pair embeddings                        |
-| **LangChain + Mistral** | Embedding generation and (planned) answer synthesis        |
+| **LangChain + Mistral** | Embedding generation and answer synthesis                  |
 | **polars**              | CSV / Excel parsing                                        |
 | **Dishka**              | Dependency injection with APP/REQUEST scope management     |
 | **TaskIQ + NATS**       | Background task queue (indexing, outbox relay, projection) |
@@ -144,14 +178,15 @@ HTTP client  →  POST /v1/search
   This is the actionable half: each entry is an FAQ entry worth writing.
 - **Hybrid ranking** — Reciprocal Rank Fusion combines the retrievers by rank,
   so their incompatible score scales never leak into the result.
+- **Grounded answers** — `/v1/ask` writes an answer only from pairs it actually
+  retrieved, cites them, and returns nothing at all when the catalog cannot
+  ground one. An unanswerable question is a gap report entry, not an error.
+- **Journalling by pipeline** — every query that serves a user is recorded by a
+  pipeline registered against a marker type, so an endpoint cannot serve a
+  request without counting it.
 
 ### Not built yet
 
-The search and RAG halves are partially implemented — the domain and the dense
-retriever exist, the rest does not:
-
-- `POST /v1/search` — no lexical (PostgreSQL FTS) retriever, no query handler
-- `POST /v1/ask` — the `conversation` bounded context does not exist
 - a reaper for tasks stuck in `RUNNING` after a worker dies
 
 ---
@@ -166,6 +201,13 @@ All endpoints are served under `root_path="/api"`.
 |--------|--------------------------------|-------------------------------------------------|
 | `POST` | `/v1/indexing/upload`          | Upload a source file; returns `202` + `task_id` |
 | `GET`  | `/v1/indexing/tasks/{task_id}` | Poll the status of a synchronization run        |
+
+### Search
+
+| Method | Path         | Description                                             |
+|--------|--------------|---------------------------------------------------------|
+| `POST` | `/v1/search` | Hybrid search over the catalog, ranked with scores      |
+| `POST` | `/v1/ask`    | An answer written from the catalog, with its sources    |
 
 ### Statistics
 
@@ -379,7 +421,7 @@ The direction is enforced by `import-linter`, not by convention — see
 | **Indexing**     | `domain/indexing/`  | The QA catalog and each synchronization run  |
 | **Search**       | `domain/search/`    | Hybrid retrieval and rank fusion (stateless) |
 | **Analytics**    | `domain/analytics/` | What was asked, and what came back           |
-| **Conversation** | _planned_           | RAG answers with cited sources               |
+| **Conversation** | `domain/conversation/` | Grounded answers and their sources        |
 
 Only `ExternalId` crosses a context boundary. Contexts do not import each
 other's value objects — Analytics has its own `QueryText` so the search context
@@ -440,14 +482,16 @@ reconciled forever.
 | `RunIndexingHandler`         | Reads, plans and applies the sync in one transaction |
 | `MarkIndexingFailedHandler`  | Records the failure; survives the work's rollback    |
 | `RelayOutboxHandler`         | Drains a batch of outbox messages to the transport   |
-| `ProjectEventHandler`        | Applies one relayed event to the search index        |
-| `RecordQueryHandler`         | Records a served query for reporting                 |
+| `UpsertQAPairHandler`        | Projects a pair's current state onto the index       |
+| `RemoveQAPairHandler`        | Clears a pair from the index; safe to replay         |
 
 **Queries:**
 
 | Handler                        | Description                               |
 |--------------------------------|-------------------------------------------|
 | `GetIndexingTaskHandler`       | Status of one synchronization run         |
+| `SearchQAPairsHandler`         | The hybrid ranking for one set of criteria|
+| `AskQuestionHandler`           | Retrieves, then grounds one answer in it  |
 | `GetStatisticsHandler`         | Catalog and query statistics for a period |
 | `ListUnansweredQueriesHandler` | The gap report, ranked and paginated      |
 
@@ -456,7 +500,7 @@ reconciled forever.
 `AnalyticsCommandGateway`, `AnalyticsQueryGateway`, `OutboxCommandGateway`,
 `OutboxPublisher`, `EventBus`, `EventSerializer`, `TransactionManager`,
 `SourceFileStorage`, `SourceFileReader`, `SearchIndexWriter`, `DenseRetriever`,
-`Embedder`, `TaskScheduler`
+`LexicalRetriever`, `AnswerGenerator`, `Embedder`, `TaskScheduler`
 
 #### Infrastructure Layer
 
@@ -472,6 +516,8 @@ reconciled forever.
 | `SqlAlchemyTransactionManager`       | `TransactionManager`         | SQLAlchemy async session |
 | `QdrantSearchIndexWriter`            | `SearchIndexWriter`          | Qdrant (LangChain)       |
 | `QdrantDenseRetriever`               | `DenseRetriever`             | Qdrant (LangChain)       |
+| `PostgresLexicalRetriever`           | `LexicalRetriever`           | PostgreSQL FTS + GIN     |
+| `LangChainAnswerGenerator`           | `AnswerGenerator`            | Mistral chat             |
 | `LangChainEmbedder`                  | `Embedder`                   | Mistral embeddings       |
 | `PolarsSourceFileReader`             | `SourceFileReader`           | polars                   |
 | `LocalSourceFileStorage`             | `SourceFileStorage`          | Filesystem               |
@@ -639,6 +685,8 @@ src/answer_service/
 │   ├── search/              # stateless: value objects + RrfFusion
 │   │   ├── value_objects/
 │   │   └── services/
+│   ├── conversation/        # stateless: AnswerText, GroundedAnswer
+│   │   └── value_objects/
 │   └── analytics/           # QueryLog entity
 │       ├── entities/
 │       ├── value_objects/
@@ -649,24 +697,27 @@ src/answer_service/
 │   ├── commands/
 │   │   ├── indexing/        # enqueue, mark_running, run, mark_failed
 │   │   ├── outbox/          # relay_outbox
-│   │   ├── search/          # project_event
-│   │   └── analytics/       # record_query
+│   │   └── search/          # upsert_qa_pair, remove_qa_pair
 │   ├── queries/
 │   │   ├── indexing/        # get_indexing_task
+│   │   ├── search/          # search_qa_pairs
+│   │   ├── conversation/    # ask_question
 │   │   └── analytics/       # get_statistics, list_unanswered_queries
-│   ├── pipelines/           # TransactionPipeline, EventsPipeline
+│   ├── pipelines/           # Transaction, Events, QueryRecording
 │   └── common/
+│       ├── analytics/       # RecordableQuery marker, ServedQuery
 │       ├── mediator/        # handlers, markers, Sender
 │       ├── ports/           # every infrastructure interface
+│       ├── services/        # HybridSearchService
 │       └── query_params/    # Pagination, SortingOrder
 │
 ├── infrastructure/
 │   ├── adapters/
 │   │   ├── common/          # id generators, OutboxEventBus, event serializer
-│   │   ├── langchain/       # LangChainEmbedder
+│   │   ├── langchain/       # LangChainEmbedder, LangChainAnswerGenerator
 │   │   ├── messaging/       # TaskSchedulerOutboxPublisher
 │   │   ├── persistence/     # SQLAlchemy gateways, transaction manager
-│   │   ├── search/          # Qdrant writer and retriever
+│   │   ├── search/          # Qdrant writer + retriever, PostgreSQL FTS retriever
 │   │   └── source_file/     # polars reader, local storage
 │   ├── mediator/            # Registry, Chain, Resolver, MediatorImpl
 │   ├── persistence/
@@ -680,6 +731,8 @@ src/answer_service/
 │   ├── middlewares/
 │   └── routes/
 │       ├── indexing/        # enqueue_indexing, get_indexing_task
+│       ├── search/          # search_qa_pairs
+│       ├── conversation/    # ask_question
 │       └── statistics/      # get_statistics, list_unanswered_queries
 │
 ├── setup/

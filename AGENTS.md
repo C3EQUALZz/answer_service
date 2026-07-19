@@ -36,7 +36,7 @@ The domain is a modular monolith split into contexts.
 | Indexing | `domain/indexing/` | The QA catalog and each synchronization run |
 | Search | `domain/search/` | Hybrid retrieval and rank fusion (stateless) |
 | Analytics | `domain/analytics/` | What was asked, and what came back |
-| Conversation | _(planned)_ | RAG answers with cited sources |
+| Conversation | `domain/conversation/` | Grounded answers and their sources |
 
 Only `ExternalId` crosses a context boundary. Contexts do not import each
 other's value objects — Analytics has its own `QueryText` precisely so the
@@ -58,6 +58,14 @@ Terms worth knowing before changing these contexts:
   are the content backlog.
 - **Period** — the half-open window `[start, end)` a report covers, so
   consecutive periods tile without counting a boundary query twice.
+- **Score Floor** — the minimum a candidate must score to leave its retriever.
+  Applied per retriever in its own native units, never after fusion.
+- **Grounded Answer** — generated text plus the pairs it was written from. It
+  refuses to exist without sources: an answer with nothing behind it is the one
+  thing this service must not produce.
+- **Recordable Query** — the marker a query inherits to be written to the
+  journal. `QueryRecordingPipeline` is registered against it, so journalling is
+  coverage by type rather than by a call site someone has to remember.
 
 Statistics are **derived, never stored**: totals and rankings are computed from
 query logs on read. A stored counter would be the same fact in two places,
@@ -301,3 +309,17 @@ Read these before touching the corresponding area.
 - **The process will not start while Qdrant is unreachable** — the vector store
   validates its collection at construction. Deliberate; every write path needs
   it.
+- **Every PostgreSQL parser that accepts free text ANDs its terms.**
+  `websearch_to_tsquery('a b')` matches only rows holding *both*, and no pair
+  holds every word of a natural question — the lexical retriever contributed
+  exactly nothing until its terms were OR-ed through
+  `to_tsvector`/`tsvector_to_array`/`to_tsquery`.
+- **Fused scores carry no relevance signal.** RRF sums `1 / (k + rank)`, so the
+  top result scores the same whether it was perfect or terrible. A threshold
+  applied after fusion is meaningless; the floors live in the retrievers.
+- **`EventsCollection.pull_events()` returns an iterator, and it drains.**
+  Anything that reads it — a `len()`, a log line — consumes it, and the events
+  are then never published. Materialize once if you need to look.
+- **Verify against the running image, not the source tree.** A dense floor
+  looked broken for an hour because the container was still running the previous
+  build. `docker compose exec api python -c "import inspect; ..."` first.
