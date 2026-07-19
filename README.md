@@ -185,9 +185,10 @@ than in a second query, so a question is counted once in the statistics.
   pipeline registered against a marker type, so an endpoint cannot serve a
   request without counting it.
 
-### Not built yet
-
-- a reaper for tasks stuck in `RUNNING` after a worker dies
+- **Stuck-run reaper** — a run whose worker died stays `RUNNING` forever,
+  because the status is committed before the sync starts and nothing else ever
+  touches it. A cron sweep fails runs older than an hour, so the status endpoint
+  eventually tells the truth.
 
 ---
 
@@ -254,14 +255,21 @@ categories, useful for exercising the upload endpoint.
 
 ## Background Tasks
 
-| Task name      | Trigger                 | Action                                   |
-|----------------|-------------------------|------------------------------------------|
-| `indexing`     | An accepted upload      | Runs the sync, records the outcome       |
-| `relay_outbox` | Cron, every minute      | Publishes pending outbox messages        |
-| `outbox`       | One per relayed message | Projects the event into the search index |
+Every task reacting to a domain event is registered under that event's class
+name, which is how the outbox publisher routes to it without a routing table.
 
-`relay_outbox` retries; `indexing` does not, because recording a failure moves
-the task to a terminal state that a retry could not complete.
+| Task name          | Trigger                    | Action                                     |
+|--------------------|----------------------------|--------------------------------------------|
+| `IndexingTaskQueued`| A relayed queue event     | Runs the sync, records the outcome         |
+| `QAPairAdded` / `QAPairContentUpdated` | A relayed event | Projects the pair into the search index |
+| `QAPairRemoved`    | A relayed event            | Clears the pair from the search index      |
+| `IndexingStarted` / `IndexingCompleted` / `IndexingFailed` | A relayed event | Consumed and dropped; they have no projection |
+| `relay_outbox`     | Cron, every minute         | Publishes pending outbox messages          |
+| `reap_stuck_tasks` | Cron, every ten minutes    | Fails runs stuck in `RUNNING` over an hour |
+
+`relay_outbox`, the projections and `reap_stuck_tasks` retry; the indexing task
+does not, because recording a failure moves the run to a terminal state that a
+retry could not complete.
 
 ---
 

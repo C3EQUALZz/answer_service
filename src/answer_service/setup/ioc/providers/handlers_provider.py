@@ -11,6 +11,9 @@ from answer_service.application.commands.indexing.mark_indexing_failed.handler i
 from answer_service.application.commands.indexing.mark_indexing_running.handler import (
     MarkIndexingRunningHandler,
 )
+from answer_service.application.commands.indexing.reap_stuck_tasks.handler import (
+    ReapStuckTasksHandler,
+)
 from answer_service.application.commands.indexing.run_indexing.handler import (
     RunIndexingHandler,
 )
@@ -53,6 +56,7 @@ def handlers_provider() -> Provider:
         MarkIndexingRunningHandler,
         RunIndexingHandler,
         MarkIndexingFailedHandler,
+        ReapStuckTasksHandler,
         RelayOutboxHandler,
         UpsertQAPairHandler,
         RemoveQAPairHandler,

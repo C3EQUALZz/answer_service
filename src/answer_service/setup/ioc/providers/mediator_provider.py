@@ -20,6 +20,12 @@ from answer_service.application.commands.indexing.mark_indexing_running.command 
 from answer_service.application.commands.indexing.mark_indexing_running.handler import (
     MarkIndexingRunningHandler,
 )
+from answer_service.application.commands.indexing.reap_stuck_tasks.command import (
+    ReapStuckTasksCommand,
+)
+from answer_service.application.commands.indexing.reap_stuck_tasks.handler import (
+    ReapStuckTasksHandler,
+)
 from answer_service.application.commands.indexing.run_indexing.command import (
     RunIndexingCommand,
 )
@@ -123,6 +129,7 @@ def make_registry() -> Registry:
     registry.add_request_handler(RunIndexingCommand, RunIndexingHandler)
     registry.add_request_handler(MarkIndexingFailedCommand, MarkIndexingFailedHandler)
     registry.add_request_handler(RelayOutboxCommand, RelayOutboxHandler)
+    registry.add_request_handler(ReapStuckTasksCommand, ReapStuckTasksHandler)
     registry.add_request_handler(UpsertQAPairCommand, UpsertQAPairHandler)
     registry.add_request_handler(RemoveQAPairCommand, RemoveQAPairHandler)
     registry.add_request_handler(GetIndexingTaskQuery, GetIndexingTaskHandler)

@@ -63,6 +63,17 @@ class IndexingTask(Aggregate[TaskId]):
             IndexingCompleted(task_id=self.id, stats=stats),
         )
 
+    def abandon(self, failure: FailureInfo) -> None:
+        """Settles a run whose worker never came back.
+
+        Only a ``RUNNING`` task can be abandoned. A queued one has not been
+        picked up yet and is still someone's to run, and a terminal one already
+        has its answer — narrowing the transition here is what stops a reaper
+        sweeping work that is merely slow to start.
+        """
+        self._ensure_status(IndexingTaskStatus.RUNNING)
+        self.fail(failure)
+
     def fail(self, failure: FailureInfo) -> None:
         if self.status.is_terminal:
             msg = f"Task '{self.id}' is already {self.status} and cannot fail."

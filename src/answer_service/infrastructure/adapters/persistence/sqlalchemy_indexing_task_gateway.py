@@ -1,5 +1,5 @@
 import logging
-from typing import Final, override
+from typing import TYPE_CHECKING, Final, override
 
 from sqlalchemy import delete, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -9,8 +9,13 @@ from answer_service.application.common.ports.gateways import IndexingTaskCommand
 from answer_service.domain.common.events_collection import EventsCollection
 from answer_service.domain.indexing.entities.indexing_task import IndexingTask
 from answer_service.domain.indexing.value_objects.task_id import TaskId
+from answer_service.domain.indexing.value_objects.task_status import IndexingTaskStatus
 from answer_service.infrastructure.errors import RepoError
 from answer_service.infrastructure.persistence.models import indexing_tasks_table
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from datetime import datetime
 
 logger: Final[logging.Logger] = logging.getLogger(__name__)
 
@@ -42,6 +47,36 @@ class SqlAlchemyIndexingTaskGateway(IndexingTaskCommandGateway):
     @override
     async def update(self, task: IndexingTask) -> None:
         """No-op by design — see :meth:`SqlAlchemyQACatalogGateway.update`."""
+
+    @override
+    async def read_stuck(
+        self,
+        *,
+        started_before: datetime,
+        limit: int,
+    ) -> Sequence[IndexingTask]:
+        """Claims the rows this reaper tick will settle.
+
+        ``FOR UPDATE ... SKIP LOCKED`` for the same reason the outbox relay uses
+        it: several worker replicas may tick at once, and each should take rows
+        the others are not already settling rather than block on them.
+        """
+        stmt = (
+            select(IndexingTask)
+            .where(indexing_tasks_table.c.status == IndexingTaskStatus.RUNNING)
+            .where(indexing_tasks_table.c.started_at < started_before)
+            .order_by(indexing_tasks_table.c.started_at)
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+        try:
+            tasks = (await self._session.execute(stmt)).scalars().all()
+        except SQLAlchemyError as e:
+            logger.exception("failed to read stuck indexing tasks")
+            msg = "Failed to read stuck indexing tasks."
+            raise RepoError(msg) from e
+
+        return [self._inject(task) for task in tasks]
 
     @override
     async def delete_by_id(self, task_id: TaskId) -> None:

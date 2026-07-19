@@ -8,6 +8,7 @@ still recorded so tests can assert a handler wrote through the gateway.
 
 from collections import Counter
 from collections.abc import Iterable, Sequence
+from datetime import datetime
 from typing import final, override
 from uuid import UUID
 
@@ -37,6 +38,9 @@ from answer_service.domain.indexing.entities.qa_pair import QAPair
 from answer_service.domain.indexing.value_objects.content_hash import ContentHash
 from answer_service.domain.indexing.value_objects.external_id import ExternalId
 from answer_service.domain.indexing.value_objects.task_id import TaskId
+from answer_service.domain.indexing.value_objects.task_status import (
+    IndexingTaskStatus,
+)
 from answer_service.infrastructure.errors import RepoError
 
 
@@ -58,6 +62,23 @@ class InMemoryIndexingTaskGateway(IndexingTaskCommandGateway):
     async def update(self, task: IndexingTask) -> None:
         self.tasks[task.id] = task
         self.updated.append(task.id)
+
+    @override
+    async def read_stuck(
+        self,
+        *,
+        started_before: datetime,
+        limit: int,
+    ) -> Sequence[IndexingTask]:
+        stuck = [
+            task
+            for task in self.tasks.values()
+            if task.status is IndexingTaskStatus.RUNNING
+            and task.started_at is not None
+            and task.started_at < started_before
+        ]
+        stuck.sort(key=lambda task: task.started_at or started_before)
+        return stuck[:limit]
 
     @override
     async def delete_by_id(self, task_id: TaskId) -> None:
