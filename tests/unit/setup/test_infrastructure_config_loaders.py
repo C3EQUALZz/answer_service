@@ -219,10 +219,52 @@ def test_mistral_rejects_a_non_positive_embedding_dimension() -> None:
     )
 
 
+def test_mistral_carries_default_request_timeouts() -> None:
+    """A ceiling must exist even when nothing sets one.
+
+    The SDK's own 120s default is far too long for a user waiting on a search or
+    an answer.
+    """
+    config = MistralConfigLoader(mistral_source_stub()).load()
+
+    assert config.embedding_timeout_seconds == 30
+    assert config.chat_timeout_seconds == 60
+
+
+@pytest.mark.parametrize(
+    "variable",
+    ("MISTRAL_EMBEDDING_TIMEOUT_SECONDS", "MISTRAL_CHAT_TIMEOUT_SECONDS"),
+)
+def test_mistral_rejects_a_non_positive_timeout(variable: str) -> None:
+    """A zero timeout would mean 'give up before asking', which is not a ceiling."""
+    loader = MistralConfigLoader(mistral_source_stub(**{variable: "0"}))
+
+    with pytest.raises(DatureConfigError) as excinfo:
+        loader.load()
+
+    assert f"{variable} must be positive" in render_exception(excinfo.value)
+
+
 def test_qdrant_builds_a_plain_http_url_by_default() -> None:
     config = QdrantConfigLoader(qdrant_source_stub()).load()
 
     assert config.url == "http://localhost:6333"
+
+
+def test_qdrant_carries_a_default_request_timeout() -> None:
+    config = QdrantConfigLoader(qdrant_source_stub()).load()
+
+    assert config.timeout_seconds == 10
+
+
+@pytest.mark.parametrize("value", ("0", "-3"))
+def test_qdrant_rejects_a_non_positive_timeout(value: str) -> None:
+    loader = QdrantConfigLoader(qdrant_source_stub(QDRANT_TIMEOUT_SECONDS=value))
+
+    with pytest.raises(DatureConfigError) as excinfo:
+        loader.load()
+
+    assert "QDRANT_TIMEOUT_SECONDS must be positive" in render_exception(excinfo.value)
 
 
 def test_qdrant_switches_to_https_when_asked() -> None:

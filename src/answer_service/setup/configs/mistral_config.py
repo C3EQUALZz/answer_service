@@ -20,6 +20,13 @@ class MistralConfig:
             default: an answer grounded in retrieved documents should be
             reproducible rather than creative.
         max_concurrency: Parallel embedding requests allowed during indexing.
+        embedding_timeout_seconds: Ceiling on one embedding request. Bounds the
+            query embedding on the search path and each batch during indexing;
+            the SDK's own default is 120s, far too long for a user waiting on a
+            search.
+        chat_timeout_seconds: Ceiling on one chat completion, for the RAG
+            answer. Larger than the embedding ceiling because a generation is
+            slower than an embedding, still well under the SDK's 120s default.
     """
 
     api_key: str
@@ -29,3 +36,5 @@ class MistralConfig:
     chat_model: str = "mistral-large-latest"
     temperature: float = 0.0
     max_concurrency: int = 5
+    embedding_timeout_seconds: int = 30
+    chat_timeout_seconds: int = 60

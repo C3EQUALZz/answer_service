@@ -41,4 +41,8 @@ class QdrantConfigLoader(ConfigLoader[QdrantConfig]):
                 lambda c: bool(c.collection_name.strip()),
                 error_message="QDRANT_COLLECTION_NAME must not be empty",
             ),
+            V.root(
+                lambda c: c.timeout_seconds > 0,
+                error_message="QDRANT_TIMEOUT_SECONDS must be positive",
+            ),
         )

@@ -23,5 +23,9 @@ class MistralEnvSourceFactory(SourceFactory):
                 F[MistralConfig].chat_model: "MISTRAL_CHAT_MODEL",
                 F[MistralConfig].temperature: "MISTRAL_TEMPERATURE",
                 F[MistralConfig].max_concurrency: "MISTRAL_MAX_CONCURRENCY",
+                F[MistralConfig].embedding_timeout_seconds: (
+                    "MISTRAL_EMBEDDING_TIMEOUT_SECONDS"
+                ),
+                F[MistralConfig].chat_timeout_seconds: "MISTRAL_CHAT_TIMEOUT_SECONDS",
             },
         )

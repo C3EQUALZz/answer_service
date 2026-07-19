@@ -17,6 +17,10 @@ class QdrantConfig:
         use_https: Whether to talk to the server over TLS.
         prefer_grpc: Whether to use the gRPC transport, which is faster for
             bulk upserts during indexing.
+        timeout_seconds: Ceiling on a single Qdrant request. Bounds both the
+            dense search on the read path and the collection check at startup,
+            so an unreachable Qdrant fails the request (or the boot) instead of
+            hanging it.
 
     Properties:
         url: Complete Qdrant connection URL.
@@ -28,6 +32,7 @@ class QdrantConfig:
     collection_name: str = "qa_pairs"
     use_https: bool = False
     prefer_grpc: bool = False
+    timeout_seconds: int = 10
 
     @property
     def url(self) -> str:

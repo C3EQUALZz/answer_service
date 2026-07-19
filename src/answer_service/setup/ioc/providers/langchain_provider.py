@@ -23,6 +23,7 @@ def create_embedding_function(config: MistralConfig) -> Embeddings:
         "model": config.embedding_model,
         "max_concurrent_requests": config.max_concurrency,
         "tokenizer": create_batch_token_estimator(),
+        "timeout": config.embedding_timeout_seconds,
     }
     if config.base_url:
         kwargs["endpoint"] = config.base_url
@@ -35,6 +36,7 @@ def create_chat_model(config: MistralConfig) -> BaseChatModel:
         "api_key": config.api_key,
         "model": config.chat_model,
         "temperature": config.temperature,
+        "timeout": config.chat_timeout_seconds,
     }
     if config.base_url:
         kwargs["endpoint"] = config.base_url
@@ -53,6 +55,7 @@ def create_qdrant_client(config: QdrantConfig) -> QdrantClient:
         url=config.url,
         api_key=config.api_key or None,
         prefer_grpc=config.prefer_grpc,
+        timeout=config.timeout_seconds,
     )
 
 

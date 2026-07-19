@@ -101,6 +101,8 @@ def mistral_env(**overrides: str) -> dict[str, str]:
         "MISTRAL_CHAT_MODEL": "mistral-large-latest",
         "MISTRAL_TEMPERATURE": "0.0",
         "MISTRAL_MAX_CONCURRENCY": "5",
+        "MISTRAL_EMBEDDING_TIMEOUT_SECONDS": "30",
+        "MISTRAL_CHAT_TIMEOUT_SECONDS": "60",
     } | overrides
 
 
@@ -113,6 +115,7 @@ def qdrant_env(**overrides: str) -> dict[str, str]:
         "QDRANT_COLLECTION_NAME": "qa_pairs",
         "QDRANT_USE_HTTPS": "false",
         "QDRANT_PREFER_GRPC": "false",
+        "QDRANT_TIMEOUT_SECONDS": "10",
     } | overrides
 
 

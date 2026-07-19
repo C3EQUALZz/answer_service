@@ -52,4 +52,12 @@ class MistralConfigLoader(ConfigLoader[MistralConfig]):
                 lambda c: c.max_concurrency > 0,
                 error_message="MISTRAL_MAX_CONCURRENCY must be positive",
             ),
+            V.root(
+                lambda c: c.embedding_timeout_seconds > 0,
+                error_message="MISTRAL_EMBEDDING_TIMEOUT_SECONDS must be positive",
+            ),
+            V.root(
+                lambda c: c.chat_timeout_seconds > 0,
+                error_message="MISTRAL_CHAT_TIMEOUT_SECONDS must be positive",
+            ),
         )

@@ -22,5 +22,6 @@ class QdrantEnvSourceFactory(SourceFactory):
                 F[QdrantConfig].collection_name: "QDRANT_COLLECTION_NAME",
                 F[QdrantConfig].use_https: "QDRANT_USE_HTTPS",
                 F[QdrantConfig].prefer_grpc: "QDRANT_PREFER_GRPC",
+                F[QdrantConfig].timeout_seconds: "QDRANT_TIMEOUT_SECONDS",
             },
         )
