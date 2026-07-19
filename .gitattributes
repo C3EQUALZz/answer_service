@@ -1,0 +1,6 @@
+# core.autocrlf is on for this repo; these must never be line-ending converted.
+*.xlsx binary
+*.xls binary
+
+# Keep the lockfile out of diffs and merges — regenerate it with `uv lock`.
+uv.lock -diff linguist-generated

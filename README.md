@@ -193,6 +193,21 @@ The upload must contain these columns; anything else is ignored.
 | `category`    | Category used for filtering                      |
 | `updated_at`  | Timestamp; naive values are read as UTC          |
 
+Constraints the reader and the domain enforce:
+
+- `external_id` must be non-empty and **unique within the file** — a duplicate
+  fails the whole synchronization rather than picking a winner.
+- `question` non-empty, at most 4096 characters.
+- `answer` non-empty, at most 16384 characters.
+- `category` non-empty.
+- `updated_at` must parse as a timestamp. It does **not** decide whether a pair
+  changed — the content hash does.
+- The format is sniffed from the file's bytes, not its extension or its
+  `Content-Type`.
+
+`examples/qa_catalog_sample.xlsx` is a valid 24-row catalog across five
+categories, useful for exercising the upload endpoint.
+
 ---
 
 ## Background Tasks
