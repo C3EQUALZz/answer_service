@@ -1,0 +1,123 @@
+name: answer-service
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: deploy/prod/answer_service/Dockerfile
+  image: answer-service:local
+  env_file: [.env.dev]
+  environment:
+    POSTGRES_HOST: postgres
+    NATS_HOST: nats
+    REDIS_HOST: redis
+    QDRANT_HOST: qdrant
+    SOURCE_STORAGE_DIRECTORY: /app/var/uploads
+  volumes:
+    - uploads:/app/var/uploads
+  restart: unless-stopped
+
+x-backing-services: &backing-services
+  postgres: {condition: service_healthy}
+  nats: {condition: service_healthy}
+  redis: {condition: service_healthy}
+  qdrant: {condition: service_started}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-answer_service}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-answer_service}
+      POSTGRES_DB: ${POSTGRES_DB:-answer_service}
+    ports: ["5432:5432"]
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-answer_service}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  nats:
+    # JetStream is off by default, and the broker is pull-based JetStream.
+    image: nats:2.12-alpine
+    command: ["--jetstream", "--store_dir=/data", "--http_port=8222"]
+    ports: ["4222:4222", "8222:8222"]
+    volumes: [nats-data:/data]
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:8-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["6379:6379"]
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.16.1
+    ports: ["6333:6333", "6334:6334"]
+    volumes: [qdrant-data:/qdrant/storage]
+    restart: unless-stopped
+
+  migrations:
+    <<: *app
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: on-failure
+
+  api:
+    <<: *app
+    ports: ["8080:8080"]
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import urllib.request
+          urllib.request.urlopen("http://localhost:8080/healthcheck/", timeout=5)
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      <<: *backing-services
+      migrations: {condition: service_completed_successfully}
+
+  worker:
+    <<: *app
+    command:
+      - taskiq
+      - worker
+      - answer_service.worker_app:create_worker_taskiq_app
+    depends_on:
+      <<: *backing-services
+      migrations: {condition: service_completed_successfully}
+
+  scheduler:
+    <<: *app
+    command:
+      - taskiq
+      - scheduler
+      - answer_service.scheduler_app:create_scheduler_taskiq_app
+    depends_on:
+      <<: *backing-services
+      migrations: {condition: service_completed_successfully}
+
+volumes:
+  postgres-data:
+  nats-data:
+  redis-data:
+  qdrant-data:
+  uploads:

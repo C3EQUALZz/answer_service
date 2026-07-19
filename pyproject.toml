@@ -52,6 +52,9 @@ dependencies = [
     "taskiq==0.12.4",
     "taskiq-nats==0.6.0",
     "taskiq-redis==1.2.3",
+    # `fastapi_app` imports uvicorn directly. It was only ever present as a
+    # transitive development dependency, so a `--no-dev` install had no server.
+    "uvicorn[standard]==0.51.0",
 ]
 
 [project.urls]

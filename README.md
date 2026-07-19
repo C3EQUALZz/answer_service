@@ -7,6 +7,14 @@ lexical retrieval, and reports on the questions it could not answer.*
 Built using the principles of Robert Martin (aka Uncle Bob) and Domain-Driven
 Design (DDD).
 
+<p align="center">
+  <a href="https://github.com/C3EQUALZz/answer_service/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/C3EQUALZz/answer_service/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/C3EQUALZz/answer_service/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/C3EQUALZz/answer_service/actions/workflows/codeql.yml/badge.svg"></a>
+  <a href="https://codecov.io/gh/C3EQUALZz/answer_service"><img alt="Coverage" src="https://codecov.io/gh/C3EQUALZz/answer_service/branch/master/graph/badge.svg"></a>
+  <img alt="Python" src="https://img.shields.io/badge/python-3.14-blue">
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-green"></a>
+</p>
+
 ---
 
 ## Overview
@@ -216,9 +224,31 @@ git clone https://github.com/C3EQUALZz/answer_service
 cd answer_service
 
 uv sync --group dev
+cp deploy/env.example .env.dev   # then fill in MISTRAL_API_KEY
 ```
 
+### With Docker
+
+The whole environment — PostgreSQL, NATS (JetStream), Redis, Qdrant, plus the
+API, the worker and the scheduler — comes up from one compose file. Migrations
+run to completion first; the application services wait on them.
+
+```sh
+just up          # everything
+just up-deps     # only the backing services, to run the app on the host
+just logs api
+just down
+```
+
+The API, the worker and the scheduler share one image
+(`deploy/prod/answer_service/Dockerfile`) and differ only in their command. They
+also share the `uploads` volume: the API stages an upload there and the worker
+reads it back, possibly minutes later in another container.
+
 ### Environment Variables
+
+`deploy/env.example` is the complete, annotated list. The excerpt below is the
+part you are most likely to change.
 
 ```env
 # PostgreSQL
@@ -548,6 +578,32 @@ in-memory stubs. Integration tests run against a real PostgreSQL started by
 testcontainers, with an in-process Qdrant and fake embeddings; they resolve
 **ports** from the container rather than naming concrete adapters, so the
 persistence technology can change without rewriting them.
+
+### Continuous Integration
+
+`just ci` runs locally exactly what CI runs, in the same order.
+
+| Workflow | What it guards |
+|---|---|
+| `ci.yml` | ruff, codespell/typos, mypy, import-linter, bandit, semgrep, the full test suite with coverage, and a gitleaks scan |
+| `codeql.yml` | CodeQL `security-extended` for Python, weekly and on every PR |
+| `dependency-review.yml` | Blocks a PR introducing a high-severity advisory or a copyleft licence |
+| `zizmor.yml` | Static security analysis of the workflows themselves |
+| `sonarqube.yml` | SonarQube Cloud, gated on the `ENABLE_SONAR` repository variable |
+| `docker.yml` | Builds the image; pushes to GHCR on `master` and on tags |
+| `pr-title.yml` | Conventional Commits on the PR title, which becomes the squash commit |
+| `labeler.yml` / `labels.yml` | Path-based PR labels, mirroring the layer boundaries |
+
+Third-party actions are pinned to a full commit SHA. CodeRabbit reviews pull
+requests against the layer rules (`.coderabbit.yaml`).
+
+Secrets and variables the workflows expect:
+
+| Name | Kind | Needed for |
+|---|---|---|
+| `SONAR_TOKEN` | secret | SonarQube Cloud |
+| `ENABLE_SONAR` | variable | Set to `true` to activate the Sonar workflow |
+| `CODECOV_TOKEN` | secret | Coverage upload (optional; the step does not fail CI) |
 
 ---
 

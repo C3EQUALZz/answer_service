@@ -167,3 +167,6 @@ repomix-output.md
 src/answer_service/_version.py
 # Local agent permissions accumulate one-off entries; they are per-machine.
 .claude/settings.local.json
+
+# CI coverage / test reports
+junit.xml

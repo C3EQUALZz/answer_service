@@ -65,7 +65,53 @@ static-analysis: mypy bandit semgrep import-linter
 [doc("Run pytest with coverage")]
 [group("tests")]
 test:
-  pytest --cov=src/answer_service --cov-report=term-missing
+  uv run --active --frozen pytest --cov=src/answer_service --cov-report=term-missing
+
+[doc("Unit tests only (no Docker required)")]
+[group("tests")]
+test-unit *params:
+  uv run --active --frozen pytest tests/unit {{params}}
+
+[doc("Integration tests only (needs Docker)")]
+[group("tests")]
+test-integration *params:
+  uv run --active --frozen pytest tests/integration {{params}}
+
+# Emits coverage.xml and junit.xml, which sonar-project.properties points at.
+[doc("Run the full suite the way CI does")]
+[group("tests")]
+test-ci:
+  uv run --active --frozen pytest --cov=src/answer_service --cov-report=xml --cov-report=term-missing --junitxml=junit.xml
+
+[doc("Everything CI runs, in CI's order")]
+[group("tests")]
+ci: linter static-analysis test-ci
+
+# Docker
+[doc("Build the production image")]
+[group("docker")]
+docker-build:
+  docker build -f deploy/prod/answer_service/Dockerfile -t answer-service:local .
+
+[doc("Start the local environment (postgres, nats, redis, qdrant, app)")]
+[group("docker")]
+up *params:
+  docker compose up -d {{params}}
+
+[doc("Start only the backing services, for running the app on the host")]
+[group("docker")]
+up-deps:
+  docker compose up -d postgres nats redis qdrant
+
+[doc("Stop the local environment")]
+[group("docker")]
+down *params:
+  docker compose down {{params}}
+
+[doc("Tail the logs of the application services")]
+[group("docker")]
+logs *params:
+  docker compose logs -f {{params}}
 
 [doc("Pre-commit modified files")]
 [group("pre-commit")]
