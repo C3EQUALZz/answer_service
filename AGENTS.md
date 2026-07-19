@@ -59,7 +59,9 @@ Terms worth knowing before changing these contexts:
 - **Period** — the half-open window `[start, end)` a report covers, so
   consecutive periods tile without counting a boundary query twice.
 - **Score Floor** — the minimum a candidate must score to leave its retriever.
-  Applied per retriever in its own native units, never after fusion.
+  Applied per retriever, never after fusion, and on a different principle each
+  side: dense uses an absolute cosine, lexical a fraction of the best match for
+  that same query. See "Relevance thresholds" below before changing either.
 - **Grounded Answer** — generated text plus the pairs it was written from. It
   refuses to exist without sources: an answer with nothing behind it is the one
   thing this service must not produce.
@@ -323,3 +325,37 @@ Read these before touching the corresponding area.
 - **Verify against the running image, not the source tree.** A dense floor
   looked broken for an hour because the container was still running the previous
   build. `docker compose exec api python -c "import inspect; ..."` first.
+- **`ts_rank_cd` is not comparable between queries.** It grows with the number
+  of matched terms, so the same pair scored 1.4 for "orders" and 3.2 for "how do
+  I track my order". An absolute lexical threshold therefore measures query
+  length, not relevance — which is why that floor is relative. Normalisation
+  flags do not rescue it: the bounded variant still moved 0.58 → 0.76 on that
+  same pair.
+
+## Relevance thresholds
+
+`SEARCH_DENSE_SCORE_FLOOR` decides which questions the service is allowed to
+answer at all. **The current default is a guess**, set by hand against a
+24-pair sample catalog, and no test can tell you it is wrong: a floor that is
+too high does not fail, it silently refuses questions the catalog could have
+answered, and the users simply leave.
+
+Do not try to calibrate it from synthetic labels. Asking the catalog its own
+questions leaks — the identical text is in the index, so it scores ~1.0 and
+tells you nothing about paraphrased questions. Inventing nonsense queries fails
+the other way: real unanswerable questions are *on topic but uncovered*
+("do you ship to Brazil?"), and score far higher than deliberate gibberish. Both
+errors widen the gap artificially and yield a threshold that looks well
+separated and is not. An earlier calibration script did exactly this and was
+deleted for it.
+
+What works today, with no new code: set the floor, then watch `unanswered_rate`
+on `/v1/statistics/` and read `/v1/statistics/unanswered`. Sensible on-topic
+questions in that list mean the floor is too high; junk means it is working.
+
+What would let it be automated: a "did this answer help" label on served
+queries. `QueryLog` already stores the text, the result count and the top score
+— the label is the only missing column. With it, choosing the threshold becomes
+a measurement (sweep it, compute precision/recall, check the AUC to see whether
+*any* threshold separates the classes) instead of a judgement call, and it can
+be rechecked on a schedule as the catalog drifts.

@@ -7,6 +7,9 @@ from answer_service.setup.bootstrap.loaders.alchemy_config_loader import (
     SQLAlchemyConfigLoader,
 )
 from answer_service.setup.bootstrap.loaders.asgi_config_loader import ASGIConfigLoader
+from answer_service.setup.bootstrap.loaders.indexing_config_loader import (
+    IndexingConfigLoader,
+)
 from answer_service.setup.bootstrap.loaders.logging_config_loader import (
     LoggingConfigLoader,
 )
@@ -35,6 +38,9 @@ from answer_service.setup.bootstrap.sources.alchemy_env_source_factory import (
 )
 from answer_service.setup.bootstrap.sources.asgi_env_source_factory import (
     ASGIEnvSourceFactory,
+)
+from answer_service.setup.bootstrap.sources.indexing_env_source_factory import (
+    IndexingEnvSourceFactory,
 )
 from answer_service.setup.bootstrap.sources.logging_env_source_factory import (
     LoggingEnvSourceFactory,
@@ -65,6 +71,7 @@ from answer_service.setup.bootstrap.sources.taskiq_env_source_factory import (
 )
 from answer_service.setup.configs.alchemy_config import SQLAlchemyConfig
 from answer_service.setup.configs.asgi_config import ASGIConfig
+from answer_service.setup.configs.indexing_config import IndexingConfig
 from answer_service.setup.configs.logging_config import LoggingConfig
 from answer_service.setup.configs.mistral_config import MistralConfig
 from answer_service.setup.configs.nats_config import NatsConfig
@@ -89,6 +96,7 @@ class AppConfigs:
     taskiq: TaskIQConfig
     mistral: MistralConfig
     qdrant: QdrantConfig
+    indexing: IndexingConfig
     search: SearchConfig
     storage: StorageConfig
 
@@ -114,6 +122,7 @@ def setup_configs() -> AppConfigs:
         taskiq=TaskIQConfigLoader(TaskIQEnvSourceFactory()).load(),
         mistral=MistralConfigLoader(MistralEnvSourceFactory()).load(),
         qdrant=QdrantConfigLoader(QdrantEnvSourceFactory()).load(),
+        indexing=IndexingConfigLoader(IndexingEnvSourceFactory()).load(),
         search=SearchConfigLoader(SearchEnvSourceFactory()).load(),
         storage=StorageConfigLoader(StorageEnvSourceFactory()).load(),
     )
@@ -138,6 +147,7 @@ def make_container_context(
         TaskIQConfig: configs.taskiq,
         MistralConfig: configs.mistral,
         QdrantConfig: configs.qdrant,
+        IndexingConfig: configs.indexing,
         SearchConfig: configs.search,
         StorageConfig: configs.storage,
         AsyncBroker: broker,

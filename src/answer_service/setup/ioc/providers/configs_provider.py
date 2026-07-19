@@ -5,6 +5,7 @@ from taskiq import AsyncBroker
 
 from answer_service.setup.configs.alchemy_config import SQLAlchemyConfig
 from answer_service.setup.configs.asgi_config import ASGIConfig
+from answer_service.setup.configs.indexing_config import IndexingConfig
 from answer_service.setup.configs.mistral_config import MistralConfig
 from answer_service.setup.configs.nats_config import NatsConfig
 from answer_service.setup.configs.postgres_config import PostgresConfig
@@ -34,6 +35,7 @@ def configs_provider() -> Provider:
     provider.from_context(provides=TaskIQConfig)
     provider.from_context(provides=MistralConfig)
     provider.from_context(provides=QdrantConfig)
+    provider.from_context(provides=IndexingConfig)
     provider.from_context(provides=SearchConfig)
     provider.from_context(provides=StorageConfig)
     provider.from_context(provides=AsyncBroker)

@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 RANK_LABEL: Final[str] = "rank"
+MATCHES_SUBQUERY: Final[str] = "matches"
 
 
 @final
@@ -40,20 +41,21 @@ class PostgresLexicalRetriever(LexicalRetriever):
 
     def __init__(self, session: AsyncSession, search_config: SearchConfig) -> None:
         self._session: Final[AsyncSession] = session
-        self._score_floor: Final[float] = search_config.lexical_score_floor
+        self._relative_floor: Final[float] = search_config.lexical_relative_floor
 
     @override
     async def retrieve(self, criteria: SearchCriteria) -> Sequence[ScoredCandidate]:
         logger.debug(
-            "postgres_lexical: searching '%s', top_k=%d, floor=%.3f, category=%s",
+            "postgres_lexical: searching '%s', top_k=%d, relative floor=%.2f, "
+            "category=%s",
             criteria.query.content,
             criteria.top_k.value,
-            self._score_floor,
+            self._relative_floor,
             criteria.category,
         )
 
         try:
-            statement = self._statement(criteria, self._score_floor)
+            statement = self._statement(criteria, self._relative_floor)
             rows = (await self._session.execute(statement)).all()
         except SQLAlchemyError as e:
             logger.exception("postgres_lexical: search failed")
@@ -61,9 +63,9 @@ class PostgresLexicalRetriever(LexicalRetriever):
             raise RepoError(msg) from e
 
         logger.info(
-            "postgres_lexical: %d candidate(s) above floor %.3f",
+            "postgres_lexical: %d candidate(s) within %.0f%% of the best match",
             len(rows),
-            self._score_floor,
+            self._relative_floor * 100,
         )
         for row in rows:
             logger.debug(
@@ -108,30 +110,42 @@ class PostgresLexicalRetriever(LexicalRetriever):
     def _statement(
         cls,
         criteria: SearchCriteria,
-        score_floor: float,
+        relative_floor: float,
     ) -> Select[tuple[ExternalId, float]]:
-        """Ranks matches with ``ts_rank_cd`` and drops the ones that rank too low.
+        """Keeps the matches that rank near the best one for *this* query.
 
         Cover density ranking rewards matched terms appearing close together,
         which is what distinguishes a pair that is *about* the query from one
         that merely mentions one of its words. OR-ing the terms means a pair
-        sharing a single incidental word matches at all, so the floor is what
-        stops that from counting as an answer.
+        sharing a single incidental word matches at all, so something has to
+        stop that from counting as an answer.
+
+        The comparison is against the best match in the same result set rather
+        than against a constant, because ``ts_rank_cd`` is not comparable across
+        queries: it grows with the number of matched terms, so a longer question
+        clears any fixed number that a one-word question never could. Measured
+        against the same pair, "orders" scored 1.4 and "how do I track my order"
+        scored 3.2. As a fraction of their own best match, the incidental
+        third-place pair sits at 0.57 and 0.25 — which *is* comparable, and needs
+        no recalibration as the catalog grows.
         """
         query = cls._tsquery(criteria.query.content)
         rank = func.ts_rank_cd(qa_pairs_table.c.search_vector, query).label(RANK_LABEL)
 
-        statement = (
-            select(qa_pairs_table.c.external_id, rank)
-            .where(qa_pairs_table.c.search_vector.op("@@")(query))
-            .where(rank >= score_floor)
-            .order_by(rank.desc(), qa_pairs_table.c.external_id)
-            .limit(criteria.top_k.value)
+        matches = select(qa_pairs_table.c.external_id, rank).where(
+            qa_pairs_table.c.search_vector.op("@@")(query)
         )
-
         if criteria.category is not None:
-            statement = statement.where(
+            matches = matches.where(
                 qa_pairs_table.c.category == Category(value=criteria.category.value),
             )
+        ranked = matches.subquery(MATCHES_SUBQUERY)
 
-        return statement
+        best = select(func.max(ranked.c[RANK_LABEL])).scalar_subquery()
+
+        return (
+            select(ranked.c.external_id, ranked.c[RANK_LABEL])
+            .where(ranked.c[RANK_LABEL] >= best * relative_floor)
+            .order_by(ranked.c[RANK_LABEL].desc(), ranked.c.external_id)
+            .limit(criteria.top_k.value)
+        )

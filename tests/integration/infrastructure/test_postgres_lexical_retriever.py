@@ -205,9 +205,12 @@ async def test_a_query_of_only_stopwords_matches_nothing(
 
 def retriever_with_floor(
     session: AsyncSession,
-    floor: float,
+    relative_floor: float,
 ) -> PostgresLexicalRetriever:
-    return PostgresLexicalRetriever(session, SearchConfig(lexical_score_floor=floor))
+    return PostgresLexicalRetriever(
+        session,
+        SearchConfig(lexical_relative_floor=relative_floor),
+    )
 
 
 @pytest.mark.usefixtures("_catalog")
@@ -220,15 +223,18 @@ async def test_a_weak_match_is_kept_or_dropped_by_the_floor_alone(
     every query looks answered and the gap report can never fire. Both floors
     are run against one query so the difference cannot be a missing match.
     """
-    query = criteria("shipping")
+    query = criteria("refund shipping")
 
     async with container(scope=Scope.REQUEST) as scope:
         session = await scope.get(AsyncSession)
         permissive = await retriever_with_floor(session, 0.0).retrieve(query)
-        strict = await retriever_with_floor(session, 1.5).retrieve(query)
+        strict = await retriever_with_floor(session, 1.0).retrieve(query)
 
-    assert [candidate.external_id.value for candidate in permissive] == ["q-shipping"]
-    assert strict == []
+    assert {candidate.external_id.value for candidate in permissive} == {
+        "q-refund",
+        "q-shipping",
+    }
+    assert len(strict) < len(permissive)
 
 
 @pytest.mark.usefixtures("_catalog")
@@ -240,7 +246,70 @@ async def test_the_floor_keeps_a_match_that_covers_the_query(
         session = await scope.get(AsyncSession)
         found = await retriever_with_floor(
             session,
-            SearchConfig().lexical_score_floor,
+            SearchConfig().lexical_relative_floor,
         ).retrieve(criteria("I forgot my password and cannot log in"))
 
     assert [candidate.external_id.value for candidate in found] == ["q-password"]
+
+
+@pytest.mark.usefixtures("_catalog")
+async def test_the_floor_does_not_depend_on_how_long_the_query_is(
+    container: AsyncContainer,
+) -> None:
+    """The whole reason the floor is relative.
+
+    ``ts_rank_cd`` grows with the number of matched terms, so a fixed threshold
+    admits a long question and rejects a short one describing the same need. As
+    a fraction of each query's own best match, both behave the same.
+    """
+    async with container(scope=Scope.REQUEST) as scope:
+        session = await scope.get(AsyncSession)
+        retriever = retriever_with_floor(
+            session,
+            SearchConfig().lexical_relative_floor,
+        )
+        short = await retriever.retrieve(criteria("password"))
+        long = await retriever.retrieve(
+            criteria("I forgot my password and cannot log in to my account"),
+        )
+
+    assert [candidate.external_id.value for candidate in short] == ["q-password"]
+    assert [candidate.external_id.value for candidate in long] == ["q-password"]
+
+
+@pytest.mark.usefixtures("_catalog")
+async def test_a_pair_sharing_one_incidental_word_is_dropped(
+    container: AsyncContainer,
+) -> None:
+    """What the floor exists to remove, stated as a case rather than a number."""
+    async with container(scope=Scope.REQUEST) as scope:
+        session = await scope.get(AsyncSession)
+        everything = await retriever_with_floor(session, 0.0).retrieve(
+            criteria("how long does shipping take"),
+        )
+        filtered = await retriever_with_floor(
+            session,
+            SearchConfig().lexical_relative_floor,
+        ).retrieve(criteria("how long does shipping take"))
+
+    assert filtered[0].external_id.value == "q-shipping"
+    assert len(filtered) <= len(everything)
+
+
+@pytest.mark.usefixtures("_catalog")
+async def test_the_best_match_always_survives_any_floor(
+    container: AsyncContainer,
+) -> None:
+    """A relative floor can never empty a result set that had a match.
+
+    That is the property an absolute floor lacked: it could reject every
+    candidate of a perfectly answerable query just because the query was short.
+    """
+    async with container(scope=Scope.REQUEST) as scope:
+        session = await scope.get(AsyncSession)
+        found = await retriever_with_floor(session, 1.0).retrieve(
+            criteria("refund"),
+        )
+
+    assert found
+    assert found[0].external_id.value == "q-refund"

@@ -58,6 +58,7 @@ from answer_service.setup.bootstrap.setups.task_manager_setup import (
 )
 from answer_service.setup.configs.alchemy_config import SQLAlchemyConfig
 from answer_service.setup.configs.asgi_config import ASGIConfig
+from answer_service.setup.configs.indexing_config import IndexingConfig
 from answer_service.setup.configs.mistral_config import MistralConfig
 from answer_service.setup.configs.nats_config import NatsConfig
 from answer_service.setup.configs.postgres_config import PostgresConfig
@@ -163,6 +164,7 @@ def container_context(
         # model produces unrelated vectors, so a similarity against it means
         # nothing and any real floor would reject every candidate. The lexical
         # floor is left at its production value, where the scores are genuine.
+        IndexingConfig: IndexingConfig(),
         SearchConfig: SearchConfig(dense_score_floor=MIN_COSINE),
         StorageConfig: StorageConfig(directory=tmp_path_factory.mktemp("uploads")),
         AsyncBroker: broker,

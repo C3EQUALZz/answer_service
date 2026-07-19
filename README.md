@@ -65,8 +65,8 @@ HTTP client  →  POST /v1/search
           ▼                    ▼
    DenseRetriever        LexicalRetriever
    (Qdrant vectors)      (PostgreSQL FTS)
-   drops below            drops below
-   dense_score_floor      lexical_score_floor
+   drops below an        drops below a share
+   absolute cosine       of its own best match
           │                    │
           └─────────┬──────────┘
                     ▼
@@ -82,6 +82,13 @@ HTTP client  →  POST /v1/search
 Each retriever drops its own weak matches before fusion. Fused scores are
 positional, so they carry no relevance signal — a floor applied after fusion
 could not tell a good match from a bad one, and the gap report would never fire.
+
+The two are filtered differently because their scores mean different things. A
+cosine similarity is a property of the embedding model, so an absolute floor
+keeps its meaning as the catalog grows. `ts_rank_cd` is not: it rises with the
+number of matched terms, so the same pair scores 1.4 for "orders" and 3.2 for
+"how do I track my order". The lexical side is therefore filtered relative to
+the best match for its own query, which needs no recalibration at any size.
 
 ### Ask flow
 
@@ -312,8 +319,9 @@ reads it back, possibly minutes later in another container.
 
 ### Environment Variables
 
-`deploy/env.example` is the complete, annotated list. The excerpt below is the
-part you are most likely to change.
+The excerpt below is the part you are most likely to change. The full set
+lives in `setup/bootstrap/sources/` — one factory per config, each naming
+the variables it reads.
 
 ```env
 # PostgreSQL
@@ -367,6 +375,13 @@ TASKIQ_STREAM_NAME=answer_service_jetstream
 TASKIQ_DURABLE=answer_service_durable
 TASKIQ_QUEUE=answer_service_workers
 
+# Search relevance — see "Relevance thresholds" in AGENTS.md before changing
+SEARCH_DENSE_SCORE_FLOOR=0.7
+SEARCH_LEXICAL_RELATIVE_FLOOR=0.35
+
+# Indexing — how long a run may stay RUNNING before the reaper fails it
+INDEXING_STUCK_AFTER_SECONDS=3600
+
 # Source file staging — must be shared by the API and the worker
 SOURCE_STORAGE_DIRECTORY=var/uploads
 
@@ -382,6 +397,10 @@ FASTAPI_DEBUG=false
 >
 > The process also refuses to start while Qdrant is unreachable — the vector
 > store validates its collection on construction, and every write path needs it.
+>
+> `SEARCH_DENSE_SCORE_FLOOR` is the one setting here that no test can validate:
+> too high and the service silently refuses questions it could have answered.
+> Watch `unanswered_rate` on `/v1/statistics/` after changing it.
 
 ### Running the Services
 
