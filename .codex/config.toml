@@ -1,0 +1,15 @@
+# Codex configuration for answer_service.
+#
+# Project rules live in AGENTS.md at the repository root — Codex reads it
+# automatically. This file only sets execution policy.
+
+[sandbox]
+# The test suite starts a Postgres container and the tooling writes into the
+# working tree, so both are required.
+mode = "workspace-write"
+network_access = true
+
+[approval]
+# Editing and running the toolchain is routine here; anything that changes
+# dependencies or history is not.
+policy = "on-request"

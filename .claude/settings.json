@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(just:*)",
+      "Bash(uv run pytest:*)",
+      "Bash(uv run ruff:*)",
+      "Bash(uv run mypy:*)",
+      "Bash(uv run alembic upgrade head --sql)",
+      "Bash(uv run alembic history:*)",
+      "Bash(uv run alembic current:*)",
+      "Bash(uv run --active pytest:*)",
+      "Bash(uv run --active ruff:*)",
+      "Bash(uv run --active lint-imports)",
+      "Bash(uv sync:*)",
+      "Bash(uv lock:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(docker info:*)",
+      "Bash(docker ps:*)"
+    ],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean -fdx:*)",
+      "Bash(rm -rf src:*)",
+      "Bash(rm -rf tests:*)",
+      "Bash(rm -rf .git:*)",
+      "Bash(uv run alembic downgrade:*)",
+      "Bash(dropdb:*)",
+      "Bash(psql:*)",
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(**/*.pem)",
+      "Read(**/*secret*)",
+      "Edit(uv.lock)",
+      "Edit(.env)",
+      "Edit(.env.*)"
+    ],
+    "ask": [
+      "Bash(uv add:*)",
+      "Bash(uv remove:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(docker:*)"
+    ]
+  }
+}
