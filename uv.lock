@@ -136,6 +136,7 @@ dependencies = [
     { name = "dature" },
     { name = "dishka" },
     { name = "fastapi" },
+    { name = "fastexcel" },
     { name = "langchain-core" },
     { name = "langchain-mistralai" },
     { name = "langchain-qdrant" },
@@ -155,7 +156,6 @@ dev = [
     { name = "bandit" },
     { name = "codespell" },
     { name = "coverage" },
-    { name = "fastexcel" },
     { name = "httpx" },
     { name = "import-linter" },
     { name = "mypy" },
@@ -182,7 +182,6 @@ lint = [
 ]
 test = [
     { name = "coverage" },
-    { name = "fastexcel" },
     { name = "httpx" },
     { name = "nox" },
     { name = "pytest" },
@@ -201,6 +200,7 @@ requires-dist = [
     { name = "dature", specifier = "==0.22.4" },
     { name = "dishka", specifier = "==1.10.1" },
     { name = "fastapi", specifier = "==0.139.2" },
+    { name = "fastexcel", specifier = ">=0.20.2" },
     { name = "langchain-core", specifier = ">=1.4.9" },
     { name = "langchain-mistralai", specifier = ">=1.1.6" },
     { name = "langchain-qdrant", specifier = ">=1.1.0" },
@@ -220,7 +220,6 @@ dev = [
     { name = "bandit", specifier = ">=1.8.6" },
     { name = "codespell", specifier = ">=2.4.1" },
     { name = "coverage", specifier = ">=7.13.4" },
-    { name = "fastexcel", specifier = ">=0.20.2" },
     { name = "httpx", specifier = ">=0.28.0" },
     { name = "import-linter", specifier = ">=2.10" },
     { name = "mypy", specifier = ">=1.18.2" },
@@ -247,7 +246,6 @@ lint = [
 ]
 test = [
     { name = "coverage", specifier = ">=7.13.4" },
-    { name = "fastexcel", specifier = ">=0.20.2" },
     { name = "httpx", specifier = ">=0.28.0" },
     { name = "nox", specifier = ">=2025.5.1" },
     { name = "pytest", specifier = ">=8.4.2" },

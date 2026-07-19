@@ -143,7 +143,12 @@ services:
     command:
       - taskiq
       - worker
+      - --ack-type
+      - when_saved
       - answer_service.worker_app:create_worker_taskiq_app
+      - -fsd
+      - -tp
+      - "**/tasks/*.py"
     depends_on:
       <<: *backing-services
       migrations: {condition: service_completed_successfully}
@@ -154,6 +159,9 @@ services:
       - taskiq
       - scheduler
       - answer_service.scheduler_app:create_scheduler_taskiq_app
+      - -fsd
+      - -tp
+      - "**/tasks/*.py"
     depends_on:
       <<: *backing-services
       migrations: {condition: service_completed_successfully}
