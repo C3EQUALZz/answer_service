@@ -47,6 +47,8 @@ class QdrantSearchIndexWriter(SearchIndexWriter):
             return
 
         try:
+            # `aadd_texts`, not `add_texts`: the latter is synchronous, returns
+            # a list, and awaiting it raises TypeError at the first upsert.
             await self._vector_store.aadd_texts(
                 texts=[self._embeddable_text(document) for document in documents],
                 metadatas=[
