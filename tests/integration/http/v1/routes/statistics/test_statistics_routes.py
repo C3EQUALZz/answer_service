@@ -17,8 +17,8 @@ pytestmark = [
     pytest.mark.usefixtures("clean_tables"),
 ]
 
-STATISTICS_URL = "/v1/statistics/"
-UNANSWERED_URL = "/v1/statistics/unanswered"
+STATISTICS_URL = "/api/v1/statistics"
+UNANSWERED_URL = "/api/v1/statistics/unanswered"
 RECENTLY = datetime.now(UTC) - timedelta(hours=1)
 
 

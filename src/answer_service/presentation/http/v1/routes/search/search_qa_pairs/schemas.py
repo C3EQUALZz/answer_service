@@ -1,4 +1,5 @@
 from typing import Annotated, Self
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -64,18 +65,29 @@ class SearchResultSchema(BaseModel):
 
 
 class SearchSchemaResponse(BaseModel):
-    """The ranking, best first."""
+    """The ranking, best first.
 
+    ``request_id`` is the id this query was journalled under, handed back so a
+    caller can find their request in ``/api/v1/statistics/queries``.
+    """
+
+    request_id: UUID
     query: str
     total: int
-    took_ms: int
+    duration_ms: int
     results: list[SearchResultSchema]
 
     @classmethod
-    def of(cls, response: SearchQAPairsResponse, took_ms: int) -> Self:
+    def of(
+        cls,
+        request_id: UUID,
+        response: SearchQAPairsResponse,
+        duration_ms: int,
+    ) -> Self:
         return cls(
+            request_id=request_id,
             query=response.query.content,
             total=len(response.hits),
-            took_ms=took_ms,
+            duration_ms=duration_ms,
             results=[SearchResultSchema.of(hit) for hit in response.hits],
         )

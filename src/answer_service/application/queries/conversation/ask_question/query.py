@@ -43,7 +43,7 @@ class AskQuestionQuery(RecordableQuery[AskQuestionResponse]):
     """Answers a question from the catalog, retrieving what it needs itself.
 
     Carries search criteria rather than pre-retrieved pairs: asking is one use
-    case and must be one dispatch. Retrieval is shared with ``/v1/search``
+    case and must be one dispatch. Retrieval is shared with ``/api/v1/search``
     through ``HybridSearchService``, so the two cannot disagree about what the
     catalog holds, while the journal still sees exactly one served query.
     """

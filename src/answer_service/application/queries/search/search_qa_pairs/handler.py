@@ -17,7 +17,7 @@ class SearchQAPairsHandler(
     """Returns the hybrid ranking for one set of criteria.
 
     Thin on purpose: retrieval and fusion live in ``HybridSearchService`` so
-    ``/v1/ask`` can ground an answer in exactly the same ranking without going
+    ``/api/v1/ask`` can ground an answer in exactly the same ranking without going
     back through the mediator and being counted as a second served query.
     """
 

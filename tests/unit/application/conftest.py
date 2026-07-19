@@ -88,7 +88,6 @@ from tests.unit.stubs.infrastructure import (
     StubAnswerGenerator,
     StubDenseRetriever,
     StubLexicalRetriever,
-    StubQueryLogIdGenerator,
     StubTaskIdGenerator,
 )
 from tests.unit.stubs.source_file import StubSourceFileStorage
@@ -362,15 +361,8 @@ def task_query_gateway() -> InMemoryIndexingTaskQueryGateway:
 
 
 @pytest.fixture()
-def query_log_id_generator() -> StubQueryLogIdGenerator:
-    return StubQueryLogIdGenerator()
-
-
-@pytest.fixture()
-def query_log_factory(
-    query_log_id_generator: StubQueryLogIdGenerator,
-) -> QueryLogFactory:
-    return QueryLogFactory(query_log_id_generator)
+def query_log_factory() -> QueryLogFactory:
+    return QueryLogFactory()
 
 
 @pytest.fixture()

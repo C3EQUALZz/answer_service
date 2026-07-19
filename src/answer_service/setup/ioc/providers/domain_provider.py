@@ -4,7 +4,6 @@ from typing import Final
 from dishka import Provider, Scope
 
 from answer_service.domain.analytics.factories.query_log_factory import QueryLogFactory
-from answer_service.domain.analytics.ports.id_generator import QueryLogIdGenerator
 from answer_service.domain.common.events_collection import EventsCollection
 from answer_service.domain.indexing.factories.indexing_task_factory import (
     IndexingTaskFactory,
@@ -13,10 +12,7 @@ from answer_service.domain.indexing.factories.qa_pair_factory import QAPairFacto
 from answer_service.domain.indexing.ports.id_generator import TaskIdGenerator
 from answer_service.domain.indexing.services.sync_planner import SyncPlanner
 from answer_service.domain.search.services.rrf_fusion import RrfFusion
-from answer_service.infrastructure.adapters.common import (
-    UUID4QueryLogIdGenerator,
-    UUID4TaskIdGenerator,
-)
+from answer_service.infrastructure.adapters.common import UUID4TaskIdGenerator
 
 
 def make_events_collection() -> EventsCollection:
@@ -36,7 +32,6 @@ def domain_provider() -> Provider:
     provider: Final[Provider] = Provider(scope=Scope.REQUEST)
     provider.provide(make_events_collection, provides=EventsCollection)
     provider.provide(source=UUID4TaskIdGenerator, provides=TaskIdGenerator)
-    provider.provide(source=UUID4QueryLogIdGenerator, provides=QueryLogIdGenerator)
     provider.provide(source=QAPairFactory)
     provider.provide(source=IndexingTaskFactory)
     provider.provide(source=QueryLogFactory)

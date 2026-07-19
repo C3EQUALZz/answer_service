@@ -23,7 +23,7 @@ class SearchConfig:
     it is wrong — a badly set floor does not fail, it silently refuses questions
     the catalog could have answered. Until served queries carry a "did this
     help" label, the honest way to check it is to watch ``unanswered_rate`` on
-    ``/v1/statistics/`` and read ``/v1/statistics/unanswered``: sensible
+    ``/api/v1/statistics`` and read ``/api/v1/statistics/unanswered``: sensible
     on-topic questions in that list mean the floor is too high, junk means it is
     doing its job.
 

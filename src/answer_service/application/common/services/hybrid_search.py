@@ -32,7 +32,7 @@ class HybridSearchService:
     """Retrieves from both sides, fuses the rankings and joins the text.
 
     Lives here rather than inside a query handler because two use cases need the
-    same answer: ``/v1/search`` returns the ranking, ``/v1/ask`` grounds a
+    same answer: ``/api/v1/search`` returns the ranking, ``/api/v1/ask`` grounds a
     generated answer in it. Sharing the service is what stops the two from ever
     disagreeing about what the catalog holds — a handler calling another handler
     would do the same thing, but by going back through the mediator it would be

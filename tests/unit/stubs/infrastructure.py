@@ -42,7 +42,6 @@ from answer_service.application.common.ports.task_manager.task_manager import (
 from answer_service.application.common.ports.transaction_manager import (
     TransactionManager,
 )
-from answer_service.domain.analytics.value_objects.query_log_id import QueryLogId
 from answer_service.domain.common.error import AppError
 from answer_service.domain.common.event import Event
 from answer_service.domain.conversation.value_objects.answer_text import AnswerText
@@ -220,14 +219,6 @@ class StubAnswerGenerator(AnswerGenerator):
     ) -> AnswerText:
         self.calls.append((question, grounding))
         return AnswerText(content=self.text)
-
-
-@final
-class StubQueryLogIdGenerator:
-    """Hands out fresh log ids; identity is never asserted on."""
-
-    def __call__(self) -> QueryLogId:
-        return QueryLogId(uuid4())
 
 
 @final

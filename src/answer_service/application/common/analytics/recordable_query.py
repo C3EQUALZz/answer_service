@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
+from uuid import UUID, uuid4
 
 from answer_service.application.common.mediator.markers import Query
 from answer_service.domain.analytics.value_objects.query_kind import QueryKind
@@ -34,7 +35,15 @@ class RecordableQuery[TResponse: ServedQuery](Query[TResponse], ABC):
 
     The three members below are what a journal entry needs that the response
     cannot supply — they describe the request, not its outcome.
+
+    ``request_id`` is minted here, at the request, rather than by the journal:
+    it is the correlation id the search and ask endpoints hand back, and it can
+    only be in the response *and* be the row's identity if it exists before the
+    handler runs. Keyword-only so a subclass can keep its own required fields
+    positional.
     """
+
+    request_id: UUID = field(default_factory=uuid4, kw_only=True)
 
     @property
     @abstractmethod

@@ -10,7 +10,6 @@ from .list_unanswered_queries.handlers import list_unanswered_queries_router
 
 statistics_router: Final[APIRouter] = APIRouter(
     tags=["Statistics"],
-    prefix="/statistics",
     route_class=DishkaRoute,
 )
 

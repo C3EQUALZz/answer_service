@@ -6,6 +6,8 @@ dense half ranks is therefore arbitrary — these tests assert the contract, the
 plumbing and the recording, and leave relevance to the retriever tests.
 """
 
+from uuid import UUID
+
 import pytest
 from httpx import AsyncClient
 
@@ -20,9 +22,9 @@ pytestmark = [
     pytest.mark.usefixtures("clean_tables"),
 ]
 
-SEARCH_URL = "/v1/search/"
-STATISTICS_URL = "/v1/statistics/"
-UNANSWERED_URL = "/v1/statistics/unanswered"
+SEARCH_URL = "/api/v1/search"
+STATISTICS_URL = "/api/v1/statistics"
+UNANSWERED_URL = "/api/v1/statistics/unanswered"
 
 
 @pytest.fixture()
@@ -141,6 +143,35 @@ async def test_a_served_search_reaches_the_statistics(
     assert body["queries"]["total"] == 1
     assert body["queries"]["answered"] == 1
     assert body["queries"]["unanswered"] == 0
+
+
+@pytest.mark.usefixtures("_catalog")
+async def test_the_response_carries_a_request_id_and_a_duration(
+    client: AsyncClient,
+) -> None:
+    response = await client.post(SEARCH_URL, json={"query": "reset password"})
+
+    body = response.json()
+    assert UUID(body["request_id"])
+    assert isinstance(body["duration_ms"], int)
+
+
+@pytest.mark.usefixtures("_catalog")
+async def test_the_returned_request_id_is_the_one_the_journal_kept(
+    client: AsyncClient,
+) -> None:
+    """The correlation the id exists for: a caller finds their own request.
+
+    The value handed back by the search endpoint must be the identity the
+    listing pages under, or the id would point at nothing.
+    """
+    request_id = (await client.post(SEARCH_URL, json={"query": "reset password"})).json()[
+        "request_id"
+    ]
+
+    listed = (await client.get("/api/v1/statistics/queries")).json()["entries"]
+
+    assert [entry["request_id"] for entry in listed] == [request_id]
 
 
 async def test_a_search_that_found_nothing_becomes_a_gap_report_entry(

@@ -52,7 +52,7 @@ OffsetQuery = Query(
 
 
 @list_unanswered_queries_router.get(
-    "/unanswered",
+    "/statistics/unanswered",
     summary="Questions the catalog could not answer",
     responses={
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ExceptionSchemaRich},

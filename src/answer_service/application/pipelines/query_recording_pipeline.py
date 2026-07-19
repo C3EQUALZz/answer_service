@@ -16,6 +16,7 @@ from answer_service.domain.analytics.value_objects.category_label import Categor
 from answer_service.domain.analytics.value_objects.error_code import ErrorCode
 from answer_service.domain.analytics.value_objects.latency import Latency
 from answer_service.domain.analytics.value_objects.query_execution import QueryExecution
+from answer_service.domain.analytics.value_objects.query_log_id import QueryLogId
 from answer_service.domain.analytics.value_objects.query_outcome import QueryOutcome
 from answer_service.domain.analytics.value_objects.query_text import QueryText
 from answer_service.domain.common.error import AppError
@@ -140,6 +141,7 @@ class QueryRecordingPipeline[TQuery: RecordableQuery[Any], TResponse: ServedQuer
     ) -> None:
         try:
             query_log = self._query_log_factory.create(
+                query_log_id=QueryLogId(request.request_id),
                 text=QueryText(content=request.journalled_text),
                 kind=request.journalled_kind,
                 outcome=outcome,

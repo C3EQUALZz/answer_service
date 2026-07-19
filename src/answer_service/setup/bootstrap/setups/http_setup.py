@@ -20,7 +20,7 @@ from answer_service.setup.configs.asgi_config import ASGIConfig
 
 logger: Final[logging.Logger] = logging.getLogger(__name__)
 
-API_V1_PREFIX: Final[str] = "/v1"
+API_V1_PREFIX: Final[str] = "/api/v1"
 
 
 def setup_http_routes(app: FastAPI, /) -> None:

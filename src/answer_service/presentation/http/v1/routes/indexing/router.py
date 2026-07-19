@@ -9,7 +9,6 @@ from .get_indexing_task.handlers import get_indexing_task_router
 
 indexing_router: Final[APIRouter] = APIRouter(
     tags=["Indexing"],
-    prefix="/indexing",
     route_class=DishkaRoute,
 )
 

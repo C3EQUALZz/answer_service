@@ -1,4 +1,5 @@
 from typing import Annotated, Self
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -40,17 +41,19 @@ class AskSchemaResponse(BaseModel):
     saying nothing beats inventing a policy in the operator's voice.
     """
 
+    request_id: UUID
     query: str
     answer: str | None
     sources: list[SourceSchema]
-    took_ms: int
+    duration_ms: int
 
     @classmethod
     def of(
         cls,
+        request_id: UUID,
         question: str,
         response: AskQuestionResponse,
-        took_ms: int,
+        duration_ms: int,
     ) -> Self:
         cited = (
             {source.value for source in response.answer.sources}
@@ -58,6 +61,7 @@ class AskSchemaResponse(BaseModel):
             else set()
         )
         return cls(
+            request_id=request_id,
             query=question,
             answer=(
                 response.answer.text.content if response.answer is not None else None
@@ -71,5 +75,5 @@ class AskSchemaResponse(BaseModel):
                 for hit in response.grounding
                 if hit.pair.external_id in cited
             ],
-            took_ms=took_ms,
+            duration_ms=duration_ms,
         )

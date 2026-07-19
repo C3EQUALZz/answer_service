@@ -6,6 +6,8 @@ generation and recording happen in one dispatch, that an empty catalog does not
 reach the model, and that one question produces exactly one row in the reports.
 """
 
+from uuid import UUID
+
 import pytest
 from httpx import AsyncClient
 
@@ -17,9 +19,9 @@ pytestmark = [
     pytest.mark.usefixtures("clean_tables"),
 ]
 
-ASK_URL = "/v1/ask/"
-STATISTICS_URL = "/v1/statistics/"
-UNANSWERED_URL = "/v1/statistics/unanswered"
+ASK_URL = "/api/v1/ask"
+STATISTICS_URL = "/api/v1/statistics"
+UNANSWERED_URL = "/api/v1/statistics/unanswered"
 
 
 @pytest.fixture()
@@ -55,6 +57,30 @@ async def test_a_question_is_answered_with_its_sources(client: AsyncClient) -> N
     assert body["answer"] == FAKE_ANSWER
     assert body["query"] == "reset password"
     assert "q-password" in {source["external_id"] for source in body["sources"]}
+
+
+@pytest.mark.usefixtures("_catalog")
+async def test_the_answer_carries_a_request_id_and_a_duration(
+    client: AsyncClient,
+) -> None:
+    response = await client.post(ASK_URL, json={"query": "reset password"})
+
+    body = response.json()
+    assert UUID(body["request_id"])
+    assert isinstance(body["duration_ms"], int)
+
+
+@pytest.mark.usefixtures("_catalog")
+async def test_the_returned_request_id_is_the_one_the_journal_kept(
+    client: AsyncClient,
+) -> None:
+    request_id = (await client.post(ASK_URL, json={"query": "reset password"})).json()[
+        "request_id"
+    ]
+
+    listed = (await client.get("/api/v1/statistics/queries")).json()["entries"]
+
+    assert [entry["request_id"] for entry in listed] == [request_id]
 
 
 @pytest.mark.usefixtures("_catalog")

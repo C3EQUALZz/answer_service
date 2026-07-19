@@ -64,7 +64,7 @@ OffsetQuery = Query(
 
 
 @list_query_logs_router.get(
-    "/queries",
+    "/statistics/queries",
     summary="The recorded search and ask requests, most recent first",
     responses={
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ExceptionSchemaRich},

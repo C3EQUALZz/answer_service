@@ -35,7 +35,7 @@ DaysQuery = Query(
 
 
 @get_statistics_router.get(
-    "/",
+    "/statistics",
     summary="Catalog size and query usage for a period",
     responses={
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ExceptionSchemaRich},

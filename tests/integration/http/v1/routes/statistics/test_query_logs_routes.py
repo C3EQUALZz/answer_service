@@ -21,7 +21,7 @@ pytestmark = [
     pytest.mark.usefixtures("clean_tables"),
 ]
 
-QUERIES_URL = "/v1/statistics/queries"
+QUERIES_URL = "/api/v1/statistics/queries"
 RECENTLY = datetime.now(UTC) - timedelta(hours=1)
 FAILED = QueryExecution.failed(ErrorCode(value="SearchIndexError"))
 

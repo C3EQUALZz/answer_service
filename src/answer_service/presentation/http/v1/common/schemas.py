@@ -15,7 +15,7 @@ MILLISECONDS_PER_SECOND: int = 1000
 
 
 def elapsed_ms(started_at: float) -> int:
-    """How long the caller waited, for the ``took_ms`` field.
+    """How long the caller waited, for the ``duration_ms`` field.
 
     Separate from the latency the recording pipeline journals: that one measures
     the handler, this one measures the request, and only the second is what a
@@ -27,7 +27,7 @@ def elapsed_ms(started_at: float) -> int:
 class CriteriaRequest(BaseModel):
     """What every endpoint that consults the catalog accepts.
 
-    Shared so ``/v1/search`` and ``/v1/ask`` cannot drift on what a valid query
+    Shared so ``/api/v1/search`` and ``/api/v1/ask`` cannot drift on what a valid query
     is — a question one of them rejects and the other accepts would make the two
     endpoints answer different catalogs.
     """

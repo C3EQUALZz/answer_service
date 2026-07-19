@@ -24,7 +24,7 @@ ask_question_router: Final[APIRouter] = APIRouter(
 
 
 @ask_question_router.post(
-    "/",
+    "/ask",
     summary="Answer a question from the catalog, with its sources",
     responses={
         status.HTTP_400_BAD_REQUEST: {"model": ExceptionSchema},
@@ -43,5 +43,11 @@ async def ask_question_handler(
     counted once in the reports rather than once as a search and once as an ask.
     """
     started_at = time.perf_counter()
-    response = await sender.send(AskQuestionQuery(criteria=request.to_criteria()))
-    return AskSchemaResponse.of(request.query, response, elapsed_ms(started_at))
+    query = AskQuestionQuery(criteria=request.to_criteria())
+    response = await sender.send(query)
+    return AskSchemaResponse.of(
+        query.request_id,
+        request.query,
+        response,
+        elapsed_ms(started_at),
+    )

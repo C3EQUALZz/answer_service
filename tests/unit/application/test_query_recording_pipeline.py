@@ -99,6 +99,36 @@ async def test_a_served_query_is_written_to_the_journal(
     assert not log.is_unanswered
 
 
+async def test_the_journal_records_under_the_requests_own_id(
+    query_recording_pipeline: QueryRecordingPipeline[Any, Any],
+    analytics: InMemoryAnalytics,
+) -> None:
+    """The log id is the request id, not a fresh one.
+
+    That equality is the whole point of the correlation id: the value the
+    search and ask endpoints hand back must be the one a caller can then look
+    up in the statistics listing.
+    """
+    query = SearchQAPairsQuery(criteria=criteria())
+
+    await run(query_recording_pipeline, query, served())
+
+    assert analytics.logs[0].id == query.request_id
+
+
+async def test_a_failed_query_is_recorded_under_its_request_id(
+    query_recording_pipeline: QueryRecordingPipeline[Any, Any],
+    analytics: InMemoryAnalytics,
+) -> None:
+    """A caller whose request failed can still find it by the id they were given."""
+    query = SearchQAPairsQuery(criteria=criteria())
+
+    with pytest.raises(AppError):
+        await query_recording_pipeline.handle(query, failing_handler)
+
+    assert analytics.logs[0].id == query.request_id
+
+
 async def test_a_query_with_no_results_is_recorded_as_unanswered(
     query_recording_pipeline: QueryRecordingPipeline[Any, Any],
     analytics: InMemoryAnalytics,

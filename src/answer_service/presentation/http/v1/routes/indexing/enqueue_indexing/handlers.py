@@ -28,7 +28,7 @@ SourceFile = File(
 
 
 @enqueue_indexing_router.post(
-    "/upload",
+    "/index/sync",
     status_code=status.HTTP_202_ACCEPTED,
     summary="Upload a source file and schedule a synchronization",
     responses={

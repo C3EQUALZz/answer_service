@@ -24,7 +24,7 @@ search_qa_pairs_router: Final[APIRouter] = APIRouter(
 
 
 @search_qa_pairs_router.post(
-    "/",
+    "/search",
     summary="Search the catalog for the entries that answer a question",
     responses={
         status.HTTP_400_BAD_REQUEST: {"model": ExceptionSchema},
@@ -44,5 +44,6 @@ async def search_qa_pairs_handler(
     statistics that quietly under-report.
     """
     started_at = time.perf_counter()
-    response = await sender.send(SearchQAPairsQuery(criteria=request.to_criteria()))
-    return SearchSchemaResponse.of(response, elapsed_ms(started_at))
+    query = SearchQAPairsQuery(criteria=request.to_criteria())
+    response = await sender.send(query)
+    return SearchSchemaResponse.of(query.request_id, response, elapsed_ms(started_at))

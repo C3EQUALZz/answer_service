@@ -13,9 +13,9 @@ pytestmark = [
     pytest.mark.asyncio(loop_scope="session"),
 ]
 
-SEARCH_URL = "/v1/search/"
-STATISTICS_URL = "/v1/statistics/"
-TASKS_URL = "/v1/indexing/tasks/not-a-uuid"
+SEARCH_URL = "/api/v1/search"
+STATISTICS_URL = "/api/v1/statistics"
+TASKS_URL = "/api/v1/tasks/not-a-uuid"
 
 
 async def test_a_malformed_body_answers_the_services_own_envelope(

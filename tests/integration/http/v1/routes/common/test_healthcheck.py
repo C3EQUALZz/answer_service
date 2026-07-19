@@ -42,7 +42,7 @@ async def test_the_probe_stays_healthy_across_calls(client: AsyncClient) -> None
 
 async def test_the_probe_is_not_versioned(client: AsyncClient) -> None:
     """Moving it with the API version would break every monitor on release."""
-    versioned = await client.get(f"/v1{HEALTHCHECK_URL}")
+    versioned = await client.get(f"/api/v1{HEALTHCHECK_URL}")
 
     assert versioned.status_code == 404
 
@@ -57,6 +57,6 @@ async def test_the_index_route_names_the_service(client: AsyncClient) -> None:
 
 
 async def test_an_unknown_route_is_a_not_found(client: AsyncClient) -> None:
-    response = await client.get("/v1/nothing-here")
+    response = await client.get("/api/v1/nothing-here")
 
     assert response.status_code == 404

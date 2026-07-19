@@ -88,7 +88,7 @@ from tests.unit.factories.domain_factories import (
 from tests.unit.factories.outbox_factories import make_outbox_message
 
 POSTGRES_IMAGE: Final[str] = "postgres:16-alpine"
-UPLOAD_URL: Final[str] = "/v1/indexing/upload"
+UPLOAD_URL: Final[str] = "/api/v1/index/sync"
 
 # Session-scoped async fixtures and the tests must share one loop, or the engine
 # is created on a loop that is gone by the time a test uses it.

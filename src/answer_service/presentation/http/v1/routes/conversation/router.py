@@ -8,7 +8,6 @@ from .ask_question.handlers import ask_question_router
 
 conversation_router: Final[APIRouter] = APIRouter(
     tags=["Conversation"],
-    prefix="/ask",
     route_class=DishkaRoute,
 )
 

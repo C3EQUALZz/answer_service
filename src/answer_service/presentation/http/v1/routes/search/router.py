@@ -8,7 +8,6 @@ from .search_qa_pairs.handlers import search_qa_pairs_router
 
 search_router: Final[APIRouter] = APIRouter(
     tags=["Search"],
-    prefix="/search",
     route_class=DishkaRoute,
 )
 
