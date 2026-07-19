@@ -93,9 +93,8 @@ ci: linter static-analysis test-ci
 docker-build:
   docker build -f deploy/prod/answer_service/Dockerfile -t answer-service:local .
 
-# The env file must be `.env`: `env_file:` only injects variables into the
-# containers, while ${VAR:?} interpolation in the compose file itself reads the
-# project env file, which compose looks for under that exact name.
+# Must be `.env` at the root: `env_file:` only reaches the containers, while
+# ${VAR:?} interpolation reads the project env file compose finds by that name.
 [doc("Start the local environment (postgres, nats, redis, qdrant, app)")]
 [group("docker")]
 up *params:

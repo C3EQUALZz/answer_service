@@ -1,6 +1,5 @@
 #!/bin/sh
-# Redis reads no environment variables in its config file, so the config and the
-# ACL are generated here from the environment instead of being baked in.
+# Redis reads no environment variables in its config file, so both are generated.
 set -eu
 
 : "${REDIS_DEFAULT_PASSWORD:?REDIS_DEFAULT_PASSWORD must be set}"
@@ -17,22 +16,12 @@ protected-mode yes
 appendonly yes
 appendfsync everysec
 
-# Scheduled tasks and task results must survive a restart, so eviction is off:
-# under memory pressure Redis should refuse writes loudly rather than silently
-# drop a schedule nobody notices is gone.
+# Eviction off: a dropped schedule fails silently, a refused write does not.
 maxmemory-policy noeviction
 CONF
 
-# Two users, because they are not the same principal:
-#
-#   default  - operator. Full access, used by the healthcheck and by a human
-#              with redis-cli.
-#   \$REDIS_USER - the application. Everything it needs to store results and
-#              schedules, minus the command groups it has no business calling.
-#
-# -@dangerous drops FLUSHALL, FLUSHDB, KEYS, CONFIG, SHUTDOWN and DEBUG;
-# -@admin drops replication and cluster control. CLIENT|SETINFO is granted back
-# explicitly because redis-py sends it on every connect to identify itself.
+# `default` is the operator (healthcheck, redis-cli); the app gets its own user.
+# CLIENT|SETINFO is granted back because redis-py sends it on every connect.
 cat > "${CONFIG_DIR}/users.acl" <<ACL
 user default on >${REDIS_DEFAULT_PASSWORD} ~* &* +@all
 user ${REDIS_USER} on >${REDIS_PASSWORD} ~* &* +@all -@admin -@dangerous +client|setinfo

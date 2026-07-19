@@ -1,8 +1,7 @@
 # syntax=docker/dockerfile:1.7
 #
 # One image, three processes: api, worker and scheduler differ only in command.
-# The healthcheck therefore lives on the api service in docker-compose.yaml —
-# baked in here it would mark every taskiq container unhealthy.
+# The healthcheck lives on the api service in compose, not here.
 
 ARG PYTHON_VERSION=3.14
 
@@ -46,7 +45,8 @@ COPY --from=builder --chown=app:app /app/alembic.ini /app/alembic.ini
 COPY --from=builder --chown=app:app /app/src /app/src
 
 # Written by the api, read back later by the worker: must be a shared volume.
-RUN mkdir -p /app/var/uploads && chown -R app:app /app/var
+# logs/ too, because the process runs as `app` while /app belongs to root.
+RUN mkdir -p /app/var/uploads /app/var/logs && chown -R app:app /app/var
 
 USER app
 
