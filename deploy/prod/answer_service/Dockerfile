@@ -29,20 +29,10 @@ COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev
 
-# langchain-mistralai fetches this tokenizer to size embedding batches. Warmed
-# here so the running worker never calls out to HuggingFace; falls back to a
-# character-based estimate if the fetch fails, which only costs batch accuracy.
-ENV HF_HOME=/opt/hf
-RUN --mount=type=cache,target=/root/.cache/uv \
-    HF_HOME=/opt/hf /app/.venv/bin/python -c \
-    "from tokenizers import Tokenizer; Tokenizer.from_pretrained('mistralai/Mixtral-8x7B-v0.1')" \
-    || echo "tokenizer warmup failed; runtime will estimate batches instead"
-
 FROM python:${PYTHON_VERSION}-slim-bookworm AS runtime
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    HF_HOME=/opt/hf \
     PATH="/app/.venv/bin:$PATH"
 
 RUN useradd --create-home --uid 1000 app
@@ -50,7 +40,6 @@ RUN useradd --create-home --uid 1000 app
 WORKDIR /app
 
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
-COPY --from=builder --chown=app:app /opt/hf /opt/hf
 # alembic reads revisions from disk, not from the installed package.
 COPY --from=builder --chown=app:app /app/alembic.ini /app/alembic.ini
 COPY --from=builder --chown=app:app /app/src /app/src

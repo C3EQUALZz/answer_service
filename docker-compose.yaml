@@ -14,8 +14,6 @@ x-app: &app
     SOURCE_STORAGE_DIRECTORY: /app/var/uploads
     # Only /app/var is writable by the `app` user.
     PATH_TO_SAVE_LOGS: /app/var/logs
-    # The Mistral tokenizer is baked into the image; never reach out at runtime.
-    HF_HUB_OFFLINE: "1"
   volumes:
     - uploads:/app/var/uploads
   restart: unless-stopped

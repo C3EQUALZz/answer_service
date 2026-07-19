@@ -7,6 +7,9 @@ from langchain_mistralai import ChatMistralAI, MistralAIEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient, models
 
+from answer_service.infrastructure.adapters.langchain.batch_token_estimator import (
+    create_batch_token_estimator,
+)
 from answer_service.setup.configs.mistral_config import MistralConfig
 from answer_service.setup.configs.qdrant_config import QdrantConfig
 
@@ -19,6 +22,9 @@ def create_embedding_function(config: MistralConfig) -> Embeddings:
         "api_key": config.api_key,
         "model": config.embedding_model,
         "max_concurrent_requests": config.max_concurrency,
+        # Supplied so the model never downloads the Mixtral tokenizer at run
+        # time; it is only ever used to size batches.
+        "tokenizer": create_batch_token_estimator(),
     }
     if config.base_url:
         kwargs["endpoint"] = config.base_url
