@@ -11,9 +11,8 @@ from answer_service.application.queries.indexing.get_indexing_task.query import 
 )
 from answer_service.domain.indexing.value_objects.task_id import TaskId
 from answer_service.presentation.http.v1.common.exception_handler import ExceptionSchema
-from answer_service.presentation.http.v1.routes.indexing.get_indexing_task.schemas import (  # ruff:ignore[line-too-long]
-    IndexingTaskResponse,
-)
+
+from .schemas import IndexingTaskResponse
 
 get_indexing_task_router: Final[APIRouter] = APIRouter(
     tags=["Indexing"],

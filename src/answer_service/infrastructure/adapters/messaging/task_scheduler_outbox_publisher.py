@@ -1,13 +1,18 @@
+import json
 from typing import Final, final, override
 
 from answer_service.application.common.ports.outbox import (
     OutboxMessage,
     OutboxPublisher,
 )
+from answer_service.application.common.ports.task_manager import (
+    OutboxEventPayload,
+    RawEventBody,
+)
+from answer_service.application.common.ports.task_manager.task_id import TaskKey
 from answer_service.application.common.ports.task_manager.task_manager import (
     TaskScheduler,
 )
-from answer_service.infrastructure.adapters.messaging.outbox_routes import route_for
 
 
 @final
@@ -15,18 +20,18 @@ class TaskSchedulerOutboxPublisher(OutboxPublisher):
     """Delivers outbox messages as background tasks instead of broker messages.
 
     The consumers of our domain events are our own background tasks, so the task
-    queue *is* the transport — no separate broker is involved. Which task a given
-    event becomes is declared in ``outbox_routes``; this class only carries it
-    out.
+    queue *is* the transport — no separate broker is involved. Every task is
+    registered under the name of the event it reacts to, which is what lets this
+    stay generic: it forwards the row and never learns what happens to it.
 
-    Routing here rather than at the point the event is raised is what keeps the
-    publish after the commit. ``EnqueueIndexingHandler`` runs inside the
-    transaction, so scheduling the run from there raced the commit and the
-    worker could look up a task row that was not visible yet.
+    An event with no registered task raises rather than being dropped. Adding a
+    domain event therefore means adding its task, and forgetting shows up as a
+    failing relay instead of silence.
 
-    The background task id is derived from the route's correlation field, which
-    is stable across relay retries. A redelivered message therefore lands on the
-    same task id, which is what an inbox check keys off to drop the duplicate.
+    Publishing here rather than where the event is raised is what keeps it after
+    the commit. ``EnqueueIndexingHandler`` runs inside the transaction, so
+    scheduling from there raced the commit and the worker could look up a task
+    row that was not visible yet.
     """
 
     def __init__(self, task_scheduler: TaskScheduler) -> None:
@@ -34,9 +39,15 @@ class TaskSchedulerOutboxPublisher(OutboxPublisher):
 
     @override
     async def publish(self, message: OutboxMessage) -> None:
-        route = route_for(message.event_type)
         task_id = self._task_scheduler.make_task_id(
-            route.task_key,
-            route.subject_of(message),
+            TaskKey(message.event_type),
+            message.id,
         )
-        await self._task_scheduler.schedule(task_id, route.build_payload(message))
+        await self._task_scheduler.schedule(
+            task_id,
+            OutboxEventPayload[RawEventBody](
+                message_id=message.id,
+                event_type=message.event_type,
+                body=RawEventBody.model_validate(json.loads(message.payload)),
+            ),
+        )

@@ -38,11 +38,17 @@ from answer_service.application.commands.outbox.relay_outbox.command import (
 from answer_service.application.commands.outbox.relay_outbox.handler import (
     RelayOutboxHandler,
 )
-from answer_service.application.commands.search.project_event.command import (
-    ProjectEventCommand,
+from answer_service.application.commands.search.remove_qa_pair.command import (
+    RemoveQAPairCommand,
 )
-from answer_service.application.commands.search.project_event.handler import (
-    ProjectEventHandler,
+from answer_service.application.commands.search.remove_qa_pair.handler import (
+    RemoveQAPairHandler,
+)
+from answer_service.application.commands.search.upsert_qa_pair.command import (
+    UpsertQAPairCommand,
+)
+from answer_service.application.commands.search.upsert_qa_pair.handler import (
+    UpsertQAPairHandler,
 )
 from answer_service.application.common.mediator.markers import Command
 from answer_service.application.common.mediator.sender import Sender
@@ -104,7 +110,8 @@ def make_registry() -> Registry:
     registry.add_request_handler(RunIndexingCommand, RunIndexingHandler)
     registry.add_request_handler(MarkIndexingFailedCommand, MarkIndexingFailedHandler)
     registry.add_request_handler(RelayOutboxCommand, RelayOutboxHandler)
-    registry.add_request_handler(ProjectEventCommand, ProjectEventHandler)
+    registry.add_request_handler(UpsertQAPairCommand, UpsertQAPairHandler)
+    registry.add_request_handler(RemoveQAPairCommand, RemoveQAPairHandler)
     registry.add_request_handler(RecordQueryCommand, RecordQueryHandler)
 
     registry.add_request_handler(GetIndexingTaskQuery, GetIndexingTaskHandler)

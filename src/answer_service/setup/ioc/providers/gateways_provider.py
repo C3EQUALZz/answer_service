@@ -37,7 +37,7 @@ from answer_service.infrastructure.adapters.common import (
 from answer_service.infrastructure.adapters.langchain.langchain_embedder import (
     LangChainEmbedder,
 )
-from answer_service.infrastructure.adapters.messaging.task_scheduler_outbox_publisher import (  # ruff:ignore[line-too-long]
+from answer_service.infrastructure.adapters.messaging import (
     TaskSchedulerOutboxPublisher,
 )
 from answer_service.infrastructure.adapters.persistence import (

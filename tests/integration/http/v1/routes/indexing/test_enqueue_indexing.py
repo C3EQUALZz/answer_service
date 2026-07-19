@@ -15,9 +15,6 @@ from dishka import FromDishka
 
 from answer_service.application.common.ports.gateways import IndexingTaskQueryGateway
 from answer_service.application.common.ports.outbox import OutboxCommandGateway
-from answer_service.application.common.ports.task_manager.task_keys import (
-    INDEXING_TASK_KEY,
-)
 from answer_service.domain.indexing.value_objects.task_id import TaskId
 from answer_service.domain.indexing.value_objects.task_status import IndexingTaskStatus
 from tests.integration.arrange import SourceFileUploader
@@ -82,14 +79,18 @@ async def test_the_queued_event_reaches_the_outbox(
     assert [message.event_type for message in pending] == ["IndexingTaskQueued"]
 
 
-async def test_the_worker_is_scheduled(
+async def test_the_upload_schedules_nothing_of_its_own(
     upload_source_file: SourceFileUploader,
     broker: RecordingBroker,
 ) -> None:
-    """Without this the upload is accepted and then nothing ever happens."""
+    """Scheduling from inside the request raced its own commit.
+
+    The work is started by the relay once the row is visible, so the only thing
+    the request leaves behind is the outbox message asserted above.
+    """
     await upload_source_file(make_csv_bytes())
 
-    assert broker.kicked_task_names == [str(INDEXING_TASK_KEY)]
+    assert broker.kicked_task_names == []
 
 
 async def test_a_file_with_a_missing_column_is_rejected(

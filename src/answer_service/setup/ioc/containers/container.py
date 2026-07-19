@@ -45,5 +45,5 @@ def make_container(context: dict[type, object]) -> AsyncContainer:
     loaded configs and the taskiq broker — keyed by the type they are provided
     as.
     """
-    providers: Final[tuple[Provider, ...]] = tuple(setup_providers())
+    providers: Final[Iterable[Provider]] = tuple(setup_providers())
     return make_async_container(*providers, context=context)

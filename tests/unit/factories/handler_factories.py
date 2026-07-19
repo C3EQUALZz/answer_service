@@ -16,8 +16,11 @@ from answer_service.application.commands.indexing.run_indexing.handler import (
 from answer_service.application.commands.outbox.relay_outbox.handler import (
     RelayOutboxHandler,
 )
-from answer_service.application.commands.search.project_event.handler import (
-    ProjectEventHandler,
+from answer_service.application.commands.search.remove_qa_pair.handler import (
+    RemoveQAPairHandler,
+)
+from answer_service.application.commands.search.upsert_qa_pair.handler import (
+    UpsertQAPairHandler,
 )
 from answer_service.application.common.ports.source_file.source_row import SourceRow
 from answer_service.domain.indexing.factories.indexing_task_factory import (
@@ -95,9 +98,16 @@ class EnqueueIndexingHandlerBuilder(Protocol):
     def __call__(self, *, rejects: bool = False) -> EnqueueIndexingHandler: ...
 
 
-def create_project_event_handler(
+def create_upsert_qa_pair_handler(
     *,
     catalog: InMemoryQACatalog,
     index_writer: RecordingSearchIndexWriter,
-) -> ProjectEventHandler:
-    return ProjectEventHandler(catalog, index_writer)
+) -> UpsertQAPairHandler:
+    return UpsertQAPairHandler(catalog, index_writer)
+
+
+def create_remove_qa_pair_handler(
+    *,
+    index_writer: RecordingSearchIndexWriter,
+) -> RemoveQAPairHandler:
+    return RemoveQAPairHandler(index_writer)

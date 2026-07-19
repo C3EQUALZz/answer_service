@@ -20,8 +20,11 @@ from answer_service.application.commands.indexing.run_indexing.handler import (
 from answer_service.application.commands.outbox.relay_outbox.handler import (
     RelayOutboxHandler,
 )
-from answer_service.application.commands.search.project_event.handler import (
-    ProjectEventHandler,
+from answer_service.application.commands.search.remove_qa_pair.handler import (
+    RemoveQAPairHandler,
+)
+from answer_service.application.commands.search.upsert_qa_pair.handler import (
+    UpsertQAPairHandler,
 )
 from answer_service.application.queries.analytics.get_statistics.handler import (
     GetStatisticsHandler,
@@ -48,7 +51,8 @@ def handlers_provider() -> Provider:
         RunIndexingHandler,
         MarkIndexingFailedHandler,
         RelayOutboxHandler,
-        ProjectEventHandler,
+        UpsertQAPairHandler,
+        RemoveQAPairHandler,
         RecordQueryHandler,
         GetIndexingTaskHandler,
         GetStatisticsHandler,

@@ -12,9 +12,8 @@ from answer_service.application.queries.analytics.list_unanswered_queries.query 
 )
 from answer_service.domain.analytics.value_objects.period import Period
 from answer_service.presentation.http.v1.common.exception_handler import ExceptionSchema
-from answer_service.presentation.http.v1.routes.statistics.list_unanswered_queries.schemas import (  # ruff:ignore[line-too-long]
-    UnansweredQueriesSchemaResponse,
-)
+
+from .schemas import UnansweredQueriesSchemaResponse
 
 MIN_DAYS: Final[int] = 1
 MAX_DAYS: Final[int] = 365

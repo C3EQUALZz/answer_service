@@ -16,8 +16,11 @@ from answer_service.application.commands.indexing.run_indexing.handler import (
 from answer_service.application.commands.outbox.relay_outbox.handler import (
     RelayOutboxHandler,
 )
-from answer_service.application.commands.search.project_event.handler import (
-    ProjectEventHandler,
+from answer_service.application.commands.search.remove_qa_pair.handler import (
+    RemoveQAPairHandler,
+)
+from answer_service.application.commands.search.upsert_qa_pair.handler import (
+    UpsertQAPairHandler,
 )
 from answer_service.application.common.mediator.handlers import CommandHandler
 from answer_service.application.common.mediator.markers import Command
@@ -49,9 +52,10 @@ from tests.unit.factories.handler_factories import (
     EnqueueIndexingHandlerBuilder,
     RunIndexingHandlerBuilder,
     create_enqueue_indexing_handler,
-    create_project_event_handler,
     create_relay_outbox_handler,
+    create_remove_qa_pair_handler,
     create_run_indexing_handler,
+    create_upsert_qa_pair_handler,
 )
 from tests.unit.factories.outbox_factories import make_outbox_message
 from tests.unit.stubs.gateways import (
@@ -271,11 +275,18 @@ def index_writer() -> RecordingSearchIndexWriter:
 
 
 @pytest.fixture()
-def project_event_handler(
+def upsert_qa_pair_handler(
     catalog: InMemoryQACatalog,
     index_writer: RecordingSearchIndexWriter,
-) -> ProjectEventHandler:
-    return create_project_event_handler(catalog=catalog, index_writer=index_writer)
+) -> UpsertQAPairHandler:
+    return create_upsert_qa_pair_handler(catalog=catalog, index_writer=index_writer)
+
+
+@pytest.fixture()
+def remove_qa_pair_handler(
+    index_writer: RecordingSearchIndexWriter,
+) -> RemoveQAPairHandler:
+    return create_remove_qa_pair_handler(index_writer=index_writer)
 
 
 @pytest.fixture()

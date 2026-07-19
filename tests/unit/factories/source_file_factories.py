@@ -5,11 +5,12 @@ running service, so the tests feed it genuine file bytes rather than a stub.
 """
 
 import io
+from collections.abc import Iterable
 from typing import Final
 
 import polars as pl
 
-REQUIRED_COLUMNS: Final[tuple[str, ...]] = (
+REQUIRED_COLUMNS: Final[Iterable[str]] = (
     "external_id",
     "question",
     "answer",

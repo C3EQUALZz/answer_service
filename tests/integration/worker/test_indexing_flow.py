@@ -28,8 +28,8 @@ from answer_service.application.commands.indexing.run_indexing.command import (
 from answer_service.application.commands.outbox.relay_outbox.command import (
     RelayOutboxCommand,
 )
-from answer_service.application.commands.search.project_event.command import (
-    ProjectEventCommand,
+from answer_service.application.commands.search.upsert_qa_pair.command import (
+    UpsertQAPairCommand,
 )
 from answer_service.application.common.ports.gateways import (
     IndexingTaskQueryGateway,
@@ -175,11 +175,17 @@ async def test_the_sync_writes_its_events_to_the_outbox(
     assert "IndexingCompleted" in event_types
 
 
-async def test_the_relay_hands_every_event_to_the_projector(
+async def test_the_relay_kicks_each_event_by_its_own_name(
     upload_source_file: SourceFileUploader,
     send_command: CommandSender,
     broker: RecordingBroker,
 ) -> None:
+    """The task name is the event name, which is what routes without a table.
+
+    Every pending message must reach a task: an event with none raises, so a
+    domain event added without its registration stops the relay here rather
+    than disappearing.
+    """
     await upload_and_run(upload_source_file, send_command, make_csv_bytes(rows=2))
     broker.forget_kicked()
 
@@ -187,7 +193,12 @@ async def test_the_relay_hands_every_event_to_the_projector(
 
     assert response.published == response.total
     assert response.total > 0
-    assert set(broker.kicked_task_names) == {"outbox"}
+    assert set(broker.kicked_task_names) == {
+        "QAPairAdded",
+        "IndexingTaskQueued",
+        "IndexingStarted",
+        "IndexingCompleted",
+    }
 
 
 async def test_a_relayed_message_is_not_relayed_again(
@@ -214,11 +225,7 @@ async def test_a_projected_pair_becomes_findable(
     await upload_and_run(upload_source_file, send_command, make_csv_bytes(rows=2))
 
     await send_command(
-        ProjectEventCommand(
-            message_id=UUID(int=0),
-            event_type="QAPairAdded",
-            payload='{"external_id": {"value": "q-0"}}',
-        ),
+        UpsertQAPairCommand(external_id=ExternalId(value="q-0")),
     )
 
     found = await retriever.retrieve(
@@ -236,11 +243,7 @@ async def test_projecting_the_same_event_twice_keeps_one_entry(
 ) -> None:
     """Delivery is at-least-once, so a redelivery must not duplicate the point."""
     await upload_and_run(upload_source_file, send_command, make_csv_bytes(rows=1))
-    command = ProjectEventCommand(
-        message_id=UUID(int=0),
-        event_type="QAPairAdded",
-        payload='{"external_id": {"value": "q-0"}}',
-    )
+    command = UpsertQAPairCommand(external_id=ExternalId(value="q-0"))
 
     await send_command(command)
     await send_command(command)

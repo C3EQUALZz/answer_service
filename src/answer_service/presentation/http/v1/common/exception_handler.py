@@ -15,7 +15,6 @@ from answer_service.application.error import (
     DuplicateInboxMessageError,
     IndexingTaskNotFoundError,
     InvalidSourceFileError,
-    MalformedEventPayloadError,
     MissingSourceColumnsError,
     PaginationError,
     UnsupportedSourceFormatError,
@@ -134,7 +133,6 @@ class ExceptionHandler:
             PaginationError: status.HTTP_422_UNPROCESSABLE_CONTENT,
             InvalidSourceFileError: status.HTTP_422_UNPROCESSABLE_CONTENT,
             MissingSourceColumnsError: status.HTTP_422_UNPROCESSABLE_CONTENT,
-            MalformedEventPayloadError: status.HTTP_422_UNPROCESSABLE_CONTENT,
             # 500 — the bases land here: an error surfacing as a bare base means
             # nobody classified it, which is our bug rather than the caller's.
             AppError: status.HTTP_500_INTERNAL_SERVER_ERROR,

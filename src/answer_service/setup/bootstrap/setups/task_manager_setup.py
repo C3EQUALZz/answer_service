@@ -8,6 +8,7 @@ from taskiq_redis import RedisAsyncResultBackend
 
 from answer_service.infrastructure.task_manager.tasks import (
     setup_indexing_tasks,
+    setup_lifecycle_tasks,
     setup_outbox_tasks,
     setup_projection_tasks,
 )
@@ -77,11 +78,12 @@ def setup_task_manager_middlewares(
 def setup_task_manager_tasks(broker: AsyncBroker) -> None:
     """Registers every background task on the broker.
 
-    The scheduler resolves a task by the name used at registration, and
-    ``TaskIQTaskScheduler`` derives that name from the ``TaskKey`` half of a
-    task id. A task missing here therefore fails at schedule time, not at
-    startup — which is why registration lives in one place.
+    Every task reacting to a domain event is registered under that event's class
+    name, which is how the outbox publisher finds it without a routing table. An
+    event whose task is missing here fails at publish time rather than at
+    startup, so a new domain event needs its task added alongside it.
     """
     setup_indexing_tasks(broker)
     setup_outbox_tasks(broker)
     setup_projection_tasks(broker)
+    setup_lifecycle_tasks(broker)

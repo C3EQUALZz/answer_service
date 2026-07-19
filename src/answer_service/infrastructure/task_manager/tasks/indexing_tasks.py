@@ -15,11 +15,12 @@ from answer_service.application.commands.indexing.run_indexing.command import (
     RunIndexingCommand,
 )
 from answer_service.application.common.mediator.sender import Sender
-from answer_service.application.common.ports.task_manager import RunIndexingPayload
-from answer_service.application.common.ports.task_manager.task_keys import (
-    INDEXING_TASK_KEY,
+from answer_service.application.common.ports.task_manager import (
+    IndexingTaskQueuedBody,
+    OutboxEventPayload,
 )
 from answer_service.domain.common.error import AppError
+from answer_service.domain.indexing.events import IndexingTaskQueued
 from answer_service.domain.indexing.value_objects.task_id import TaskId
 
 logger: Final[logging.Logger] = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 @inject(patch_module=True)
 async def run_indexing_task(
-    payload: RunIndexingPayload,
+    payload: OutboxEventPayload[IndexingTaskQueuedBody],
     sender: FromDishka[Sender],
 ) -> None:
     """Runs one synchronization, recording the outcome on the task either way.
@@ -43,7 +44,7 @@ async def run_indexing_task(
     Retrying a genuinely transient failure is a decision for the caller, who
     enqueues a new task.
     """
-    task_id = TaskId(payload.task_id)
+    task_id = TaskId(payload.body.task_id)
 
     await sender.send(MarkIndexingRunningCommand(task_id=task_id))
 
@@ -63,5 +64,5 @@ async def run_indexing_task(
 def setup_indexing_tasks(broker: AsyncBroker) -> None:
     broker.register_task(
         func=run_indexing_task,
-        task_name=str(INDEXING_TASK_KEY),
+        task_name=IndexingTaskQueued.__name__,
     )
