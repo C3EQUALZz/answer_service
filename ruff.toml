@@ -77,6 +77,13 @@ ignore = [
 # expected fixture data (S105/S106/S107/PLR2004); object-mother factories take
 # many keyword args (PLR0913); private access is fine in tests (SLF001).
 "tests/**/*.py" = ["S101", "S105", "S106", "S107", "PLR2004", "PLR0913", "SLF001"]
+# A FastAPI route handler's parameters *are* its query string: every filter the
+# statistics listing offers is one more parameter FastAPI must see by name, so
+# the argument count is dictated by the API contract, not by a refactor.
+"src/answer_service/presentation/http/v1/routes/statistics/list_query_logs/handlers.py" = [
+    "PLR0913",
+    "PLR0917",
+]
 
 [lint.flake8-type-checking]
 # dature/adaptix resolves dataclass field annotations at runtime via

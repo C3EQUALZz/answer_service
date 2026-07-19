@@ -1,3 +1,5 @@
+from answer_service.domain.analytics.value_objects.error_code import ErrorCode
+from answer_service.domain.analytics.value_objects.query_execution import QueryExecution
 from answer_service.domain.analytics.value_objects.query_kind import QueryKind
 from tests.unit.factories.domain_factories import make_query_log
 
@@ -14,6 +16,26 @@ def test_a_log_entry_keeps_what_it_was_given() -> None:
 def test_a_log_entry_exposes_the_gap_flag_of_its_outcome() -> None:
     assert make_query_log(results_count=0).is_unanswered
     assert not make_query_log(results_count=1).is_unanswered
+
+
+def test_a_failed_query_is_not_a_gap_even_with_no_results() -> None:
+    """A gap is a question the catalog could answer and does not.
+
+    A query that raised found nothing because the service broke — counting it
+    as unanswered would put an outage on the content backlog.
+    """
+    failed = make_query_log(
+        results_count=0,
+        execution=QueryExecution.failed(ErrorCode(value="SearchIndexError")),
+    )
+
+    assert failed.execution.is_failed
+    assert not failed.is_unanswered
+
+
+def test_a_query_defaults_to_succeeded() -> None:
+    """The journal held only successes before failures were recorded."""
+    assert not make_query_log().execution.is_failed
 
 
 def test_a_category_is_optional() -> None:

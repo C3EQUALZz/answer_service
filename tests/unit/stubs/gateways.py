@@ -23,6 +23,8 @@ from answer_service.application.common.ports.gateways import (
     QACatalogQueryGateway,
     QAPairView,
     QueryFrequency,
+    QueryLogEntry,
+    QueryLogFilters,
     QueryStatistics,
 )
 from answer_service.application.common.ports.outbox import (
@@ -221,6 +223,58 @@ class InMemoryAnalytics(AnalyticsCommandGateway, AnalyticsQueryGateway):
         sorting_order: SortingOrder,
     ) -> Sequence[QueryFrequency]:
         return self._rank(self._within(period), pagination, sorting_order)
+
+    @override
+    async def read_query_logs(
+        self,
+        filters: QueryLogFilters,
+        pagination: Pagination,
+        sorting_order: SortingOrder,
+    ) -> Sequence[QueryLogEntry]:
+        matching = self._matching(filters)
+        # Ordered by arrival, id breaking ties — the SQL gateway does the same,
+        # so a page boundary lands in the same place under both.
+        ordered = sorted(
+            matching,
+            key=lambda log: (log.occurred_at, log.id),
+            reverse=sorting_order is SortingOrder.DESC,
+        )
+        offset = pagination.offset or 0
+        window = ordered[offset:]
+        if pagination.limit is not None:
+            window = window[: pagination.limit]
+        return [self._to_entry(log) for log in window]
+
+    @override
+    async def count_query_logs(self, filters: QueryLogFilters) -> int:
+        return len(self._matching(filters))
+
+    def _matching(self, filters: QueryLogFilters) -> list[QueryLog]:
+        logs = self._within(filters.period)
+        if filters.kind is not None:
+            logs = [log for log in logs if log.kind is filters.kind]
+        if filters.status is not None:
+            logs = [log for log in logs if log.execution.status is filters.status]
+        return logs
+
+    @staticmethod
+    def _to_entry(log: QueryLog) -> QueryLogEntry:
+        return QueryLogEntry(
+            request_id=log.id,
+            kind=log.kind,
+            text=log.text.content,
+            occurred_at=log.occurred_at,
+            latency_ms=log.latency.milliseconds,
+            results_count=log.outcome.results_count,
+            top_score=log.outcome.top_score,
+            status=log.execution.status,
+            error_code=(
+                log.execution.error_code.value
+                if log.execution.error_code is not None
+                else None
+            ),
+            category=log.category.value if log.category is not None else None,
+        )
 
     def _within(self, period: Period) -> list[QueryLog]:
         return [log for log in self.logs if period.contains(log.occurred_at)]

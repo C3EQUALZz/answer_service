@@ -4,16 +4,21 @@ import pytest
 
 from answer_service.domain.analytics.errors import (
     EmptyCategoryLabelError,
+    EmptyErrorCodeError,
     EmptyQueryTextError,
+    InconsistentQueryExecutionError,
     InvalidPeriodError,
     NegativeLatencyError,
     NegativeResultsCountError,
     QueryTextTooLongError,
 )
 from answer_service.domain.analytics.value_objects.category_label import CategoryLabel
+from answer_service.domain.analytics.value_objects.error_code import ErrorCode
 from answer_service.domain.analytics.value_objects.latency import Latency
 from answer_service.domain.analytics.value_objects.period import Period
+from answer_service.domain.analytics.value_objects.query_execution import QueryExecution
 from answer_service.domain.analytics.value_objects.query_outcome import QueryOutcome
+from answer_service.domain.analytics.value_objects.query_status import QueryStatus
 from answer_service.domain.analytics.value_objects.query_text import (
     MAX_QUERY_TEXT_LENGTH,
     QueryText,
@@ -53,6 +58,39 @@ def test_an_outcome_with_no_results_is_unanswered() -> None:
 def test_a_negative_result_count_is_rejected() -> None:
     with pytest.raises(NegativeResultsCountError):
         QueryOutcome(results_count=-1)
+
+
+def test_an_error_code_must_name_something() -> None:
+    with pytest.raises(EmptyErrorCodeError):
+        ErrorCode(value="  ")
+
+
+def test_a_succeeded_execution_carries_no_error_code() -> None:
+    execution = QueryExecution.succeeded()
+
+    assert execution.status is QueryStatus.SUCCEEDED
+    assert execution.error_code is None
+    assert not execution.is_failed
+
+
+def test_a_failed_execution_records_its_code() -> None:
+    execution = QueryExecution.failed(ErrorCode(value="SearchIndexError"))
+
+    assert execution.status is QueryStatus.FAILED
+    assert execution.is_failed
+    assert execution.error_code == ErrorCode(value="SearchIndexError")
+
+
+def test_a_failure_without_a_code_is_rejected() -> None:
+    """A failure the report cannot label is one it cannot group or act on."""
+    with pytest.raises(InconsistentQueryExecutionError):
+        QueryExecution(QueryStatus.FAILED)
+
+
+def test_a_success_carrying_a_code_is_rejected() -> None:
+    """A code on a success describes nothing, so it must not be storable."""
+    with pytest.raises(InconsistentQueryExecutionError):
+        QueryExecution(QueryStatus.SUCCEEDED, ErrorCode(value="SearchIndexError"))
 
 
 def test_a_period_cannot_end_before_it_starts() -> None:

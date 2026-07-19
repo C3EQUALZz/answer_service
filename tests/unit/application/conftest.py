@@ -34,6 +34,9 @@ from answer_service.application.pipelines.transaction_pipeline import (
 from answer_service.application.queries.analytics.get_statistics.handler import (
     GetStatisticsHandler,
 )
+from answer_service.application.queries.analytics.list_query_logs.handler import (
+    ListQueryLogsHandler,
+)
 from answer_service.application.queries.analytics.list_unanswered_queries.handler import (
     ListUnansweredQueriesHandler,
 )
@@ -399,3 +402,10 @@ def list_unanswered_handler(
     analytics: InMemoryAnalytics,
 ) -> ListUnansweredQueriesHandler:
     return ListUnansweredQueriesHandler(analytics)
+
+
+@pytest.fixture()
+def list_query_logs_handler(
+    analytics: InMemoryAnalytics,
+) -> ListQueryLogsHandler:
+    return ListQueryLogsHandler(analytics)

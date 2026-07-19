@@ -13,12 +13,15 @@ from sqlalchemy import (
 from sqlalchemy.orm import composite
 
 from answer_service.domain.analytics.entities.query_log import QueryLog
+from answer_service.domain.analytics.value_objects.query_execution import QueryExecution
 from answer_service.domain.analytics.value_objects.query_outcome import QueryOutcome
 from answer_service.infrastructure.persistence.models.base import mapper_registry
 from answer_service.infrastructure.persistence.models.types import (
     CategoryLabelType,
+    ErrorCodeType,
     LatencyType,
     QueryKindType,
+    QueryStatusType,
     QueryTextType,
 )
 
@@ -31,15 +34,20 @@ query_logs_table: Final[Table] = Table(
     Column("results_count", Integer, nullable=False),
     Column("top_score", Float, nullable=True),
     Column("latency_ms", LatencyType, nullable=False),
+    Column("status", QueryStatusType, nullable=False),
+    Column("error_code", ErrorCodeType, nullable=True),
     Column("category", CategoryLabelType, nullable=True, index=True),
     Column("occurred_at", DateTime(timezone=True), nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("updated_at", DateTime(timezone=True), nullable=False),
     Index("ix_query_logs_occurred_at_text", "occurred_at", "text"),
+    # The statistics listing pages by time within a period and filters on these
+    # two, so the index leads with the ordering column the page is sorted by.
+    Index("ix_query_logs_occurred_at_status_kind", "occurred_at", "status", "kind"),
     Index(
         "ix_query_logs_unanswered",
         "occurred_at",
-        postgresql_where=text("results_count = 0"),
+        postgresql_where=text("results_count = 0 AND status = 'succeeded'"),
     ),
 )
 
@@ -47,9 +55,9 @@ query_logs_table: Final[Table] = Table(
 def map_query_logs_table() -> None:
     """Maps the QueryLog entity.
 
-    ``outcome`` is a composite over two real columns rather than a JSONB blob:
-    ``results_count`` is filtered on by every statistics query, and a value
-    buried in JSON could not be indexed for it.
+    ``outcome`` and ``execution`` are composites over real columns rather than
+    JSONB blobs: ``results_count`` and ``status`` are both filtered on by the
+    statistics queries, and a value buried in JSON could not be indexed for it.
     """
     mapper_registry.map_imperatively(
         QueryLog,
@@ -64,6 +72,11 @@ def map_query_logs_table() -> None:
                 query_logs_table.c.top_score,
             ),
             "latency": query_logs_table.c.latency_ms,
+            "execution": composite(
+                QueryExecution,
+                query_logs_table.c.status,
+                query_logs_table.c.error_code,
+            ),
             "category": query_logs_table.c.category,
             "occurred_at": query_logs_table.c.occurred_at,
             "created_at": query_logs_table.c.created_at,

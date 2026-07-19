@@ -9,6 +9,9 @@ if TYPE_CHECKING:
         CategoryLabel,
     )
     from answer_service.domain.analytics.value_objects.latency import Latency
+    from answer_service.domain.analytics.value_objects.query_execution import (
+        QueryExecution,
+    )
     from answer_service.domain.analytics.value_objects.query_kind import QueryKind
     from answer_service.domain.analytics.value_objects.query_outcome import QueryOutcome
     from answer_service.domain.analytics.value_objects.query_text import QueryText
@@ -28,13 +31,14 @@ class QueryLogFactory:
     def __init__(self, query_log_id_generator: QueryLogIdGenerator) -> None:
         self._query_log_id_generator: Final[QueryLogIdGenerator] = query_log_id_generator
 
-    def create(
+    def create(  # ruff:ignore[too-many-arguments]
         self,
         *,
         text: QueryText,
         kind: QueryKind,
         outcome: QueryOutcome,
         latency: Latency,
+        execution: QueryExecution,
         category: CategoryLabel | None = None,
     ) -> QueryLog:
         log = QueryLog(
@@ -43,12 +47,14 @@ class QueryLogFactory:
             kind=kind,
             outcome=outcome,
             latency=latency,
+            execution=execution,
             category=category,
         )
         logger.debug(
-            "query_log_factory: created %s for a %s query with %d result(s)",
+            "query_log_factory: created %s for a %s query, %s with %d result(s)",
             log.id,
             kind.value,
+            execution.status.value,
             outcome.results_count,
         )
         return log

@@ -66,6 +66,12 @@ from answer_service.application.queries.analytics.get_statistics.handler import 
 from answer_service.application.queries.analytics.get_statistics.query import (
     GetStatisticsQuery,
 )
+from answer_service.application.queries.analytics.list_query_logs.handler import (
+    ListQueryLogsHandler,
+)
+from answer_service.application.queries.analytics.list_query_logs.query import (
+    ListQueryLogsQuery,
+)
 from answer_service.application.queries.analytics.list_unanswered_queries.handler import (
     ListUnansweredQueriesHandler,
 )
@@ -140,6 +146,7 @@ def make_registry() -> Registry:
         ListUnansweredQueriesQuery,
         ListUnansweredQueriesHandler,
     )
+    registry.add_request_handler(ListQueryLogsQuery, ListQueryLogsHandler)
 
     return registry
 

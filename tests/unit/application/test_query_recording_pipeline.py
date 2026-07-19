@@ -24,7 +24,9 @@ from answer_service.application.queries.conversation.ask_question.query import (
 from answer_service.application.queries.search.search_qa_pairs.query import (
     SearchQAPairsQuery,
 )
+from answer_service.domain.analytics.value_objects.error_code import ErrorCode
 from answer_service.domain.analytics.value_objects.query_kind import QueryKind
+from answer_service.domain.analytics.value_objects.query_status import QueryStatus
 from answer_service.domain.common.error import AppError
 from answer_service.domain.search.value_objects.category_filter import CategoryFilter
 from answer_service.domain.search.value_objects.search_criteria import SearchCriteria
@@ -160,23 +162,80 @@ async def test_a_failure_to_record_does_not_fail_the_request(
     assert journal.entries == ["rollback"]
 
 
-async def test_a_handler_error_reaches_the_caller_and_records_nothing(
+async def failing_handler(_: RecordableQuery[Any]) -> StubOutcome:
+    await asyncio.sleep(0)
+    msg = "the retriever is down"
+    raise AppError(msg)
+
+
+async def test_a_handler_error_still_reaches_the_caller(
     query_recording_pipeline: QueryRecordingPipeline[Any, Any],
-    analytics: InMemoryAnalytics,
 ) -> None:
-    """A query that never completed is not a served query."""
+    """Recording the failure must not turn it into a success.
 
-    async def handle_next(_: RecordableQuery[Any]) -> StubOutcome:
-        await asyncio.sleep(0)
-        msg = "the retriever is down"
-        raise AppError(msg)
-
+    The pipeline writes a row and re-raises; swallowing the error here would
+    answer 200 with no results, which reads to a caller as an empty catalog
+    rather than a broken service.
+    """
     query = SearchQAPairsQuery(criteria=criteria())
 
     with pytest.raises(AppError):
-        await query_recording_pipeline.handle(query, handle_next)
+        await query_recording_pipeline.handle(query, failing_handler)
 
-    assert analytics.logs == []
+
+async def test_a_failed_query_is_journalled_with_its_error_code(
+    query_recording_pipeline: QueryRecordingPipeline[Any, Any],
+    analytics: InMemoryAnalytics,
+) -> None:
+    """A request the service could not serve still happened.
+
+    Leaving it out would show an outage as a drop in traffic — the failure rate
+    would stay at zero precisely while everything was failing.
+    """
+    query = SearchQAPairsQuery(criteria=criteria("how do I export data?"))
+
+    with pytest.raises(AppError):
+        await query_recording_pipeline.handle(query, failing_handler)
+
+    (log,) = analytics.logs
+    assert log.execution.status is QueryStatus.FAILED
+    assert log.execution.error_code == ErrorCode(value="AppError")
+    assert log.text.content == "how do I export data?"
+
+
+async def test_a_failed_query_counts_as_no_results_but_not_as_a_gap(
+    query_recording_pipeline: QueryRecordingPipeline[Any, Any],
+    analytics: InMemoryAnalytics,
+) -> None:
+    """The gap report is a content backlog, not an incident log.
+
+    A failed query found nothing, but for a reason nobody can fix by writing an
+    FAQ entry; counting it as unanswered would put an outage on the list of
+    questions to answer.
+    """
+    query = SearchQAPairsQuery(criteria=criteria())
+
+    with pytest.raises(AppError):
+        await query_recording_pipeline.handle(query, failing_handler)
+
+    (log,) = analytics.logs
+    assert log.outcome.results_count == 0
+    assert log.is_unanswered is False
+
+
+async def test_a_served_query_is_journalled_as_succeeded(
+    query_recording_pipeline: QueryRecordingPipeline[Any, Any],
+    analytics: InMemoryAnalytics,
+) -> None:
+    await run(
+        query_recording_pipeline,
+        SearchQAPairsQuery(criteria=criteria()),
+        served(),
+    )
+
+    (log,) = analytics.logs
+    assert log.execution.status is QueryStatus.SUCCEEDED
+    assert log.execution.error_code is None
 
 
 def test_the_marker_covers_every_recordable_query_and_nothing_else() -> None:

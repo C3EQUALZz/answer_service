@@ -12,7 +12,9 @@ from answer_service.infrastructure.mappers import (
     AdaptixSourceRowMapper,
     IndexMetadataMapper,
     IndexingTaskViewMapper,
+    QueryLogEntryMapper,
     SqlAlchemyIndexingTaskViewMapper,
+    SqlAlchemyQueryLogEntryMapper,
 )
 
 
@@ -37,6 +39,10 @@ def mappers_provider() -> Provider:
     provider.provide(
         source=SqlAlchemyIndexingTaskViewMapper,
         provides=IndexingTaskViewMapper,
+    )
+    provider.provide(
+        source=SqlAlchemyQueryLogEntryMapper,
+        provides=QueryLogEntryMapper,
     )
 
     return provider

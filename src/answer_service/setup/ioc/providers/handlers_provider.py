@@ -29,6 +29,9 @@ from answer_service.application.commands.search.upsert_qa_pair.handler import (
 from answer_service.application.queries.analytics.get_statistics.handler import (
     GetStatisticsHandler,
 )
+from answer_service.application.queries.analytics.list_query_logs.handler import (
+    ListQueryLogsHandler,
+)
 from answer_service.application.queries.analytics.list_unanswered_queries.handler import (
     ListUnansweredQueriesHandler,
 )
@@ -63,6 +66,7 @@ def handlers_provider() -> Provider:
         GetIndexingTaskHandler,
         GetStatisticsHandler,
         ListUnansweredQueriesHandler,
+        ListQueryLogsHandler,
         SearchQAPairsHandler,
         AskQuestionHandler,
     )

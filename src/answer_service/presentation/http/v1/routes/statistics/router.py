@@ -5,6 +5,7 @@ from dishka.integrations.fastapi import DishkaRoute
 from fastapi import APIRouter
 
 from .get_statistics.handlers import get_statistics_router
+from .list_query_logs.handlers import list_query_logs_router
 from .list_unanswered_queries.handlers import list_unanswered_queries_router
 
 statistics_router: Final[APIRouter] = APIRouter(
@@ -15,6 +16,7 @@ statistics_router: Final[APIRouter] = APIRouter(
 
 _sub_routers: Final[Iterable[APIRouter]] = (
     get_statistics_router,
+    list_query_logs_router,
     list_unanswered_queries_router,
 )
 

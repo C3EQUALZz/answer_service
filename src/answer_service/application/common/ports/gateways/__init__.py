@@ -2,6 +2,8 @@ from .analytics_command_gateway import AnalyticsCommandGateway
 from .analytics_query_gateway import (
     AnalyticsQueryGateway,
     QueryFrequency,
+    QueryLogEntry,
+    QueryLogFilters,
     QueryStatistics,
 )
 from .indexing_task_command_gateway import IndexingTaskCommandGateway
@@ -24,5 +26,7 @@ __all__ = [
     "QACatalogQueryGateway",
     "QAPairView",
     "QueryFrequency",
+    "QueryLogEntry",
+    "QueryLogFilters",
     "QueryStatistics",
 ]

@@ -41,6 +41,7 @@ from answer_service.application.common.ports.outbox import (
 from answer_service.application.common.ports.transaction_manager import (
     TransactionManager,
 )
+from answer_service.domain.analytics.value_objects.query_execution import QueryExecution
 from answer_service.domain.analytics.value_objects.query_kind import QueryKind
 from answer_service.domain.indexing.entities.indexing_task import IndexingTask
 from answer_service.domain.indexing.entities.qa_pair import QAPair
@@ -388,6 +389,7 @@ def store_query_log(
         occurred_at: datetime | None = None,
         kind: QueryKind = QueryKind.SEARCH,
         category: str | None = None,
+        execution: QueryExecution | None = None,
     ) -> None:
         log = make_query_log(
             text,
@@ -395,7 +397,8 @@ def store_query_log(
             latency_ms=latency_ms,
             kind=kind,
             category=category,
-            **({"occurred_at": occurred_at} if occurred_at is not None else {}),
+            occurred_at=occurred_at,
+            execution=execution,
         )
         await arrange_analytics.add(log)
         await arrange_transaction.commit()

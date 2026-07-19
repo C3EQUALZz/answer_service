@@ -10,10 +10,15 @@ from answer_service.application.common.ports.gateways import (
     AnalyticsCommandGateway,
     AnalyticsQueryGateway,
     QueryFrequency,
+    QueryLogEntry,
+    QueryLogFilters,
     QueryStatistics,
 )
 from answer_service.application.common.query_params.sorting import SortingOrder
 from answer_service.infrastructure.errors import RepoError
+from answer_service.infrastructure.mappers.query_log_entry_mapper import (
+    QueryLogEntryMapper,
+)
 from answer_service.infrastructure.persistence.models import query_logs_table
 
 if TYPE_CHECKING:
@@ -36,8 +41,13 @@ class SqlAlchemyAnalyticsGateway(AnalyticsCommandGateway, AnalyticsQueryGateway)
     Python would degrade in step with traffic, exactly when it matters most.
     """
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        entry_mapper: QueryLogEntryMapper,
+    ) -> None:
         self._session: Final[AsyncSession] = session
+        self._entry_mapper: Final[QueryLogEntryMapper] = entry_mapper
 
     @override
     async def add(self, query_log: QueryLog) -> None:
@@ -107,6 +117,71 @@ class SqlAlchemyAnalyticsGateway(AnalyticsCommandGateway, AnalyticsQueryGateway)
             QueryFrequency(text=row.text.content, occurrences=row.occurrences)
             for row in rows
         ]
+
+    @override
+    async def read_query_logs(
+        self,
+        filters: QueryLogFilters,
+        pagination: Pagination,
+        sorting_order: SortingOrder,
+    ) -> Sequence[QueryLogEntry]:
+        occurred_at = query_logs_table.c.occurred_at
+        ordering = (
+            occurred_at.asc() if sorting_order is SortingOrder.ASC else occurred_at.desc()
+        )
+        stmt = (
+            select(query_logs_table)
+            .where(self._matching(filters))
+            # The id breaks ties, so a page boundary cannot fall in the middle
+            # of a group of rows the database is free to reorder.
+            .order_by(ordering, query_logs_table.c.id.asc())
+            .limit(pagination.limit)
+            .offset(pagination.offset)
+        )
+
+        try:
+            rows = (await self._session.execute(stmt)).all()
+        except SQLAlchemyError as e:
+            logger.exception("failed to read the query journal")
+            msg = "Failed to read the query journal."
+            raise RepoError(msg) from e
+
+        return [self._entry_mapper.to_entry(row) for row in rows]
+
+    @override
+    async def count_query_logs(self, filters: QueryLogFilters) -> int:
+        stmt = (
+            select(func.count())
+            .select_from(query_logs_table)
+            .where(
+                self._matching(filters),
+            )
+        )
+
+        try:
+            total = (await self._session.execute(stmt)).scalar_one()
+        except SQLAlchemyError as e:
+            logger.exception("failed to count the query journal")
+            msg = "Failed to count the query journal."
+            raise RepoError(msg) from e
+
+        return int(total)
+
+    @staticmethod
+    def _matching(filters: QueryLogFilters) -> ColumnElement[bool]:
+        """Every filter the listing supports, ANDed into one predicate.
+
+        Shared by the page and its count so the two can never disagree about
+        what is being listed.
+        """
+        predicates: list[ColumnElement[bool]] = [
+            SqlAlchemyAnalyticsGateway._within(filters.period),
+        ]
+        if filters.kind is not None:
+            predicates.append(query_logs_table.c.kind == filters.kind)
+        if filters.status is not None:
+            predicates.append(query_logs_table.c.status == filters.status)
+        return and_(*predicates)
 
     @staticmethod
     def _frequency_stmt(

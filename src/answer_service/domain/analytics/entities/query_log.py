@@ -4,6 +4,7 @@ from typing import final
 
 from answer_service.domain.analytics.value_objects.category_label import CategoryLabel
 from answer_service.domain.analytics.value_objects.latency import Latency
+from answer_service.domain.analytics.value_objects.query_execution import QueryExecution
 from answer_service.domain.analytics.value_objects.query_kind import QueryKind
 from answer_service.domain.analytics.value_objects.query_log_id import QueryLogId
 from answer_service.domain.analytics.value_objects.query_outcome import QueryOutcome
@@ -34,10 +35,16 @@ class QueryLog(Entity[QueryLogId]):
     kind: QueryKind
     outcome: QueryOutcome
     latency: Latency
+    execution: QueryExecution = field(default_factory=QueryExecution.succeeded)
     category: CategoryLabel | None = field(default=None)
     occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     @property
     def is_unanswered(self) -> bool:
-        """Whether this request found nothing — a gap worth reporting."""
-        return self.outcome.is_unanswered
+        """Whether this request found nothing — a gap worth reporting.
+
+        Only a *successful* query can be a gap: one that raised found nothing
+        because the service broke, which is an incident rather than a question
+        the catalog fails to cover.
+        """
+        return not self.execution.is_failed and self.outcome.is_unanswered

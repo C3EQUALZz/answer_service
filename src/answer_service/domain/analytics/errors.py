@@ -27,3 +27,11 @@ class InvalidPeriodError(DomainFieldError):
 
 class EmptyCategoryLabelError(DomainFieldError):
     """Raised when a category label is empty."""
+
+
+class EmptyErrorCodeError(DomainFieldError):
+    """Raised when a recorded failure carries a blank error code."""
+
+
+class InconsistentQueryExecutionError(DomainFieldError):
+    """Raised when a query's status and its error code contradict each other."""

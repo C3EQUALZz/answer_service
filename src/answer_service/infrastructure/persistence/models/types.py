@@ -5,8 +5,10 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Dialect
 
 from answer_service.domain.analytics.value_objects.category_label import CategoryLabel
+from answer_service.domain.analytics.value_objects.error_code import ErrorCode
 from answer_service.domain.analytics.value_objects.latency import Latency
 from answer_service.domain.analytics.value_objects.query_kind import QueryKind
+from answer_service.domain.analytics.value_objects.query_status import QueryStatus
 from answer_service.domain.analytics.value_objects.query_text import QueryText
 from answer_service.domain.indexing.value_objects.answer import Answer
 from answer_service.domain.indexing.value_objects.category import Category
@@ -280,6 +282,52 @@ class QueryKindType(TypeDecorator[QueryKind]):
         dialect: Dialect,
     ) -> QueryKind | None:
         return QueryKind(value) if value is not None else None
+
+
+class QueryStatusType(TypeDecorator[QueryStatus]):
+    """Persists whether serving the query completed, as its ``StrEnum`` value."""
+
+    impl = Text
+    cache_ok = True
+
+    @override
+    def process_bind_param(
+        self,
+        value: QueryStatus | None,
+        dialect: Dialect,
+    ) -> str | None:
+        return value.value if value is not None else None
+
+    @override
+    def process_result_value(
+        self,
+        value: str | None,
+        dialect: Dialect,
+    ) -> QueryStatus | None:
+        return QueryStatus(value) if value is not None else None
+
+
+class ErrorCodeType(TypeDecorator[ErrorCode]):
+    """Persists the failure's code as plain TEXT; NULL when the query succeeded."""
+
+    impl = Text
+    cache_ok = True
+
+    @override
+    def process_bind_param(
+        self,
+        value: ErrorCode | None,
+        dialect: Dialect,
+    ) -> str | None:
+        return value.value if value is not None else None
+
+    @override
+    def process_result_value(
+        self,
+        value: str | None,
+        dialect: Dialect,
+    ) -> ErrorCode | None:
+        return ErrorCode(value=value) if value is not None else None
 
 
 class LatencyType(TypeDecorator[Latency]):

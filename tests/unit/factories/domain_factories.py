@@ -13,6 +13,7 @@ from answer_service.application.common.ports.source_file.source_row import Sourc
 from answer_service.domain.analytics.entities.query_log import QueryLog
 from answer_service.domain.analytics.value_objects.category_label import CategoryLabel
 from answer_service.domain.analytics.value_objects.latency import Latency
+from answer_service.domain.analytics.value_objects.query_execution import QueryExecution
 from answer_service.domain.analytics.value_objects.query_kind import QueryKind
 from answer_service.domain.analytics.value_objects.query_log_id import QueryLogId
 from answer_service.domain.analytics.value_objects.query_outcome import QueryOutcome
@@ -92,10 +93,11 @@ def make_query_log(
     text: str = "how do I reset my password?",
     *,
     results_count: int = 3,
-    occurred_at: datetime = SOURCE_UPDATED_AT,
+    occurred_at: datetime | None = None,
     latency_ms: int = 42,
     kind: QueryKind = QueryKind.SEARCH,
     category: str | None = None,
+    execution: QueryExecution | None = None,
 ) -> QueryLog:
     return QueryLog(
         id=QueryLogId(uuid4()),
@@ -106,8 +108,9 @@ def make_query_log(
             top_score=0.9 if results_count else None,
         ),
         latency=Latency(milliseconds=latency_ms),
+        execution=execution if execution is not None else QueryExecution.succeeded(),
         category=CategoryLabel(value=category) if category is not None else None,
-        occurred_at=occurred_at,
+        occurred_at=occurred_at if occurred_at is not None else SOURCE_UPDATED_AT,
     )
 
 
