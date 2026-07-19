@@ -10,6 +10,7 @@ from answer_service.setup.configs.nats_config import NatsConfig
 from answer_service.setup.configs.postgres_config import PostgresConfig
 from answer_service.setup.configs.qdrant_config import QdrantConfig
 from answer_service.setup.configs.redis_config import RedisConfig
+from answer_service.setup.configs.search_config import SearchConfig
 from answer_service.setup.configs.storage_config import StorageConfig
 from answer_service.setup.configs.taskiq_config import TaskIQConfig
 
@@ -33,6 +34,7 @@ def configs_provider() -> Provider:
     provider.from_context(provides=TaskIQConfig)
     provider.from_context(provides=MistralConfig)
     provider.from_context(provides=QdrantConfig)
+    provider.from_context(provides=SearchConfig)
     provider.from_context(provides=StorageConfig)
     provider.from_context(provides=AsyncBroker)
     return provider

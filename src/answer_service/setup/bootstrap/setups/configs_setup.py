@@ -21,6 +21,9 @@ from answer_service.setup.bootstrap.loaders.qdrant_config_loader import (
     QdrantConfigLoader,
 )
 from answer_service.setup.bootstrap.loaders.redis_config_loader import RedisConfigLoader
+from answer_service.setup.bootstrap.loaders.search_config_loader import (
+    SearchConfigLoader,
+)
 from answer_service.setup.bootstrap.loaders.storage_config_loader import (
     StorageConfigLoader,
 )
@@ -51,6 +54,9 @@ from answer_service.setup.bootstrap.sources.qdrant_env_source_factory import (
 from answer_service.setup.bootstrap.sources.redis_env_source_factory import (
     RedisEnvSourceFactory,
 )
+from answer_service.setup.bootstrap.sources.search_env_source_factory import (
+    SearchEnvSourceFactory,
+)
 from answer_service.setup.bootstrap.sources.storage_env_source_factory import (
     StorageEnvSourceFactory,
 )
@@ -65,6 +71,7 @@ from answer_service.setup.configs.nats_config import NatsConfig
 from answer_service.setup.configs.postgres_config import PostgresConfig
 from answer_service.setup.configs.qdrant_config import QdrantConfig
 from answer_service.setup.configs.redis_config import RedisConfig
+from answer_service.setup.configs.search_config import SearchConfig
 from answer_service.setup.configs.storage_config import StorageConfig
 from answer_service.setup.configs.taskiq_config import TaskIQConfig
 
@@ -82,6 +89,7 @@ class AppConfigs:
     taskiq: TaskIQConfig
     mistral: MistralConfig
     qdrant: QdrantConfig
+    search: SearchConfig
     storage: StorageConfig
 
 
@@ -106,6 +114,7 @@ def setup_configs() -> AppConfigs:
         taskiq=TaskIQConfigLoader(TaskIQEnvSourceFactory()).load(),
         mistral=MistralConfigLoader(MistralEnvSourceFactory()).load(),
         qdrant=QdrantConfigLoader(QdrantEnvSourceFactory()).load(),
+        search=SearchConfigLoader(SearchEnvSourceFactory()).load(),
         storage=StorageConfigLoader(StorageEnvSourceFactory()).load(),
     )
 
@@ -129,6 +138,7 @@ def make_container_context(
         TaskIQConfig: configs.taskiq,
         MistralConfig: configs.mistral,
         QdrantConfig: configs.qdrant,
+        SearchConfig: configs.search,
         StorageConfig: configs.storage,
         AsyncBroker: broker,
     }

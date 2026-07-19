@@ -9,6 +9,7 @@ from answer_service.domain.indexing.value_objects.external_id import ExternalId
 from answer_service.domain.search.value_objects.score import Score
 from answer_service.domain.search.value_objects.scored_candidate import ScoredCandidate
 from answer_service.infrastructure.errors import SearchIndexError
+from answer_service.setup.configs.search_config import SearchConfig
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -30,10 +31,21 @@ class QdrantDenseRetriever(DenseRetriever):
     The query is embedded by the vector store with the same model that produced
     the indexed vectors — sharing one configured store is what guarantees the
     two never drift apart.
+
+    Candidates below the configured similarity floor are dropped by Qdrant
+    itself. Nearest-neighbour search always returns neighbours, however distant,
+    so without a floor a question the catalog cannot answer comes back looking
+    answered — and the gap report, which counts queries that found nothing,
+    never counts anything.
     """
 
-    def __init__(self, vector_store: QdrantVectorStore) -> None:
+    def __init__(
+        self,
+        vector_store: QdrantVectorStore,
+        search_config: SearchConfig,
+    ) -> None:
         self._vector_store: Final[QdrantVectorStore] = vector_store
+        self._score_floor: Final[float] = search_config.dense_score_floor
 
     @override
     async def retrieve(self, criteria: SearchCriteria) -> Sequence[ScoredCandidate]:
@@ -44,6 +56,7 @@ class QdrantDenseRetriever(DenseRetriever):
                 query=criteria.query.content,
                 k=criteria.top_k.value,
                 filter=self._category_filter(criteria),
+                score_threshold=self._score_floor,
             )
         except Exception as e:
             msg = "Failed to query Qdrant for dense candidates."

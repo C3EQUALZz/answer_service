@@ -47,6 +47,7 @@ from answer_service.domain.indexing.entities.qa_pair import QAPair
 from answer_service.domain.indexing.value_objects.external_id import ExternalId
 from answer_service.domain.indexing.value_objects.task_id import TaskId
 from answer_service.infrastructure.persistence.models.base import metadata
+from answer_service.setup.bootstrap.loaders.search_config_loader import MIN_COSINE
 from answer_service.setup.bootstrap.setups.database_setup import setup_map_tables
 from answer_service.setup.bootstrap.setups.http_setup import (
     setup_exc_handlers,
@@ -62,6 +63,7 @@ from answer_service.setup.configs.nats_config import NatsConfig
 from answer_service.setup.configs.postgres_config import PostgresConfig
 from answer_service.setup.configs.qdrant_config import QdrantConfig
 from answer_service.setup.configs.redis_config import RedisConfig
+from answer_service.setup.configs.search_config import SearchConfig
 from answer_service.setup.configs.storage_config import StorageConfig
 from answer_service.setup.configs.taskiq_config import TaskIQConfig
 from tests.integration.arrange import (
@@ -157,6 +159,11 @@ def container_context(
         TaskIQConfig: TaskIQConfig(),
         MistralConfig: MistralConfig(api_key="test-key"),
         QdrantConfig: QdrantConfig(host="localhost", collection_name="qa_pairs_test"),
+        # The dense floor is disabled rather than tuned: the fake embedding
+        # model produces unrelated vectors, so a similarity against it means
+        # nothing and any real floor would reject every candidate. The lexical
+        # floor is left at its production value, where the scores are genuine.
+        SearchConfig: SearchConfig(dense_score_floor=MIN_COSINE),
         StorageConfig: StorageConfig(directory=tmp_path_factory.mktemp("uploads")),
         AsyncBroker: broker,
     }

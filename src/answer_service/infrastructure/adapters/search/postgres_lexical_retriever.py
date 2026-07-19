@@ -16,6 +16,7 @@ from answer_service.infrastructure.persistence.models.qa_pair import (
     TEXT_SEARCH_CONFIG,
     qa_pairs_table,
 )
+from answer_service.setup.configs.search_config import SearchConfig
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -37,13 +38,15 @@ class PostgresLexicalRetriever(LexicalRetriever):
     a pair once the outbox has been relayed.
     """
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, search_config: SearchConfig) -> None:
         self._session: Final[AsyncSession] = session
+        self._score_floor: Final[float] = search_config.lexical_score_floor
 
     @override
     async def retrieve(self, criteria: SearchCriteria) -> Sequence[ScoredCandidate]:
         try:
-            rows = (await self._session.execute(self._statement(criteria))).all()
+            statement = self._statement(criteria, self._score_floor)
+            rows = (await self._session.execute(statement)).all()
         except SQLAlchemyError as e:
             msg = "Failed to query PostgreSQL for lexical candidates."
             raise RepoError(msg) from e
@@ -81,12 +84,18 @@ class PostgresLexicalRetriever(LexicalRetriever):
         )
 
     @classmethod
-    def _statement(cls, criteria: SearchCriteria) -> Select[tuple[ExternalId, float]]:
-        """Ranks matches with ``ts_rank_cd`` and drops the ones that do not match.
+    def _statement(
+        cls,
+        criteria: SearchCriteria,
+        score_floor: float,
+    ) -> Select[tuple[ExternalId, float]]:
+        """Ranks matches with ``ts_rank_cd`` and drops the ones that rank too low.
 
         Cover density ranking rewards matched terms appearing close together,
         which is what distinguishes a pair that is *about* the query from one
-        that merely mentions one of its words.
+        that merely mentions one of its words. OR-ing the terms means a pair
+        sharing a single incidental word matches at all, so the floor is what
+        stops that from counting as an answer.
         """
         query = cls._tsquery(criteria.query.content)
         rank = func.ts_rank_cd(qa_pairs_table.c.search_vector, query).label(RANK_LABEL)
@@ -94,6 +103,7 @@ class PostgresLexicalRetriever(LexicalRetriever):
         statement = (
             select(qa_pairs_table.c.external_id, rank)
             .where(qa_pairs_table.c.search_vector.op("@@")(query))
+            .where(rank >= score_floor)
             .order_by(rank.desc(), qa_pairs_table.c.external_id)
             .limit(criteria.top_k.value)
         )

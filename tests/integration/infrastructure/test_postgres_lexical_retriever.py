@@ -9,12 +9,15 @@ from collections.abc import AsyncIterator
 
 import pytest
 from dishka import AsyncContainer, Scope
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from answer_service.application.common.ports.search import LexicalRetriever
 from answer_service.domain.search.value_objects.category_filter import CategoryFilter
 from answer_service.domain.search.value_objects.search_criteria import SearchCriteria
 from answer_service.domain.search.value_objects.search_query import SearchQuery
 from answer_service.domain.search.value_objects.top_k import TopK
+from answer_service.infrastructure.adapters.search import PostgresLexicalRetriever
+from answer_service.setup.configs.search_config import SearchConfig
 from tests.integration.arrange import PairBuilder, PairStorer
 
 pytestmark = [
@@ -36,8 +39,18 @@ def criteria(
 
 
 @pytest.fixture()
-async def _catalog(make_pair: PairBuilder, store_qa_pairs: PairStorer) -> None:
-    """The three pairs every test here searches over."""
+async def _catalog(
+    clean_tables: None,
+    make_pair: PairBuilder,
+    store_qa_pairs: PairStorer,
+) -> None:
+    """The three pairs every test here searches over.
+
+    Depends on the truncation rather than leaving it to a mark: the order two
+    ``usefixtures`` marks run in is not guaranteed, and seeding before the
+    truncate leaves the table empty.
+    """
+    del clean_tables
     await store_qa_pairs(
         make_pair(
             "q-password",
@@ -188,3 +201,46 @@ async def test_a_query_of_only_stopwords_matches_nothing(
     found = await retriever.retrieve(criteria("how do I the a"))
 
     assert found == []
+
+
+def retriever_with_floor(
+    session: AsyncSession,
+    floor: float,
+) -> PostgresLexicalRetriever:
+    return PostgresLexicalRetriever(session, SearchConfig(lexical_score_floor=floor))
+
+
+@pytest.mark.usefixtures("_catalog")
+async def test_a_weak_match_is_kept_or_dropped_by_the_floor_alone(
+    container: AsyncContainer,
+) -> None:
+    """The floor is what lets a query count as unanswered.
+
+    OR-ing terms means almost any query matches something, so without a floor
+    every query looks answered and the gap report can never fire. Both floors
+    are run against one query so the difference cannot be a missing match.
+    """
+    query = criteria("shipping")
+
+    async with container(scope=Scope.REQUEST) as scope:
+        session = await scope.get(AsyncSession)
+        permissive = await retriever_with_floor(session, 0.0).retrieve(query)
+        strict = await retriever_with_floor(session, 1.5).retrieve(query)
+
+    assert [candidate.external_id.value for candidate in permissive] == ["q-shipping"]
+    assert strict == []
+
+
+@pytest.mark.usefixtures("_catalog")
+async def test_the_floor_keeps_a_match_that_covers_the_query(
+    container: AsyncContainer,
+) -> None:
+    """A real match must survive the production floor, or search returns nothing."""
+    async with container(scope=Scope.REQUEST) as scope:
+        session = await scope.get(AsyncSession)
+        found = await retriever_with_floor(
+            session,
+            SearchConfig().lexical_score_floor,
+        ).retrieve(criteria("I forgot my password and cannot log in"))
+
+    assert [candidate.external_id.value for candidate in found] == ["q-password"]
