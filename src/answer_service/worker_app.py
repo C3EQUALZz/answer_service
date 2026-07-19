@@ -51,8 +51,6 @@ def create_worker_taskiq_app() -> AsyncBroker:
     setup_task_manager_tasks(broker=worker_broker)
 
     async def startup(state: TaskiqState) -> None:  # ruff:ignore[unused-function-argument, unused-async]
-        # Mapped on worker startup rather than at import: taskiq forks workers,
-        # and mapping in the parent would be inherited half-initialised.
         setup_map_tables()
         logger.info("Taskiq worker started")
 

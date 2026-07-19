@@ -39,8 +39,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     task_manager: AsyncBroker = cast("AsyncBroker", app.state.task_manager)
     container: AsyncContainer = cast("AsyncContainer", app.state.dishka_container)
 
-    # The API only ever enqueues; the worker process runs the tasks. Starting
-    # the broker in worker mode here would make the API compete for them.
     if not task_manager.is_worker_process:
         logger.info("Starting taskiq broker")
         await task_manager.startup()
@@ -48,9 +46,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
-        # In a finally block so a crash during serving still releases the
-        # connection pools — without it a failing app leaks them until the
-        # process is killed.
         if not task_manager.is_worker_process:
             logger.info("Shutting down taskiq broker")
             await task_manager.shutdown()
@@ -70,9 +65,6 @@ def create_fastapi_app() -> FastAPI:  # pragma: no cover
         nats_config=configs.nats,
         redis_config=configs.redis,
     )
-    # Registered here too, even though this process runs none of them: the
-    # scheduler resolves a task by name through the broker, so an API that did
-    # not know the names could not enqueue anything.
     setup_task_manager_tasks(task_manager)
 
     app: FastAPI = FastAPI(

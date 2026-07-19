@@ -41,16 +41,12 @@ def upgrade() -> None:
         ["category"],
         unique=False,
     )
-    # Reports filter by period, then group by text; one composite index serves
-    # both steps and the period-only lookups.
     op.create_index(
         "ix_query_logs_occurred_at_text",
         "query_logs",
         ["occurred_at", "text"],
         unique=False,
     )
-    # The gap report reads only queries that found nothing — a small minority of
-    # rows, so a partial index keeps it proportional to them.
     op.create_index(
         "ix_query_logs_unanswered",
         "query_logs",

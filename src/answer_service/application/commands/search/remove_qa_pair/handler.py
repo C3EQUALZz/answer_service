@@ -1,3 +1,4 @@
+import logging
 from typing import Final, override
 
 from answer_service.application.commands.search.remove_qa_pair.command import (
@@ -5,6 +6,8 @@ from answer_service.application.commands.search.remove_qa_pair.command import (
 )
 from answer_service.application.common.mediator.handlers import CommandHandler
 from answer_service.application.common.ports.search import SearchIndexWriter
+
+logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 
 class RemoveQAPairHandler(CommandHandler[RemoveQAPairCommand, None]):
@@ -19,4 +22,6 @@ class RemoveQAPairHandler(CommandHandler[RemoveQAPairCommand, None]):
 
     @override
     async def handle(self, command: RemoveQAPairCommand) -> None:
+        logger.info("remove_qa_pair: dropping '%s' from the index", command.external_id)
         await self._index_writer.delete([command.external_id])
+        logger.info("remove_qa_pair: '%s' is gone from the index", command.external_id)

@@ -94,7 +94,6 @@ class ExceptionHandler:
 
     _ERROR_MAPPING: Final[MappingProxyType[type[Exception], int]] = MappingProxyType(
         {
-            # 400 — the caller sent a value the domain refuses.
             DomainFieldError: status.HTTP_400_BAD_REQUEST,
             InconsistentTimeError: status.HTTP_400_BAD_REQUEST,
             EmptyExternalIdError: status.HTTP_400_BAD_REQUEST,
@@ -119,22 +118,16 @@ class ExceptionHandler:
             NegativeLatencyError: status.HTTP_400_BAD_REQUEST,
             InvalidPeriodError: status.HTTP_400_BAD_REQUEST,
             EmptyCategoryLabelError: status.HTTP_400_BAD_REQUEST,
-            # 404
             IndexingTaskNotFoundError: status.HTTP_404_NOT_FOUND,
             ConversationNotFoundError: status.HTTP_404_NOT_FOUND,
-            # 409 — the request contradicts state that already exists.
             InvalidTaskTransitionError: status.HTTP_409_CONFLICT,
             DuplicateInboxMessageError: status.HTTP_409_CONFLICT,
             DuplicateExternalIdError: status.HTTP_409_CONFLICT,
-            # 415 — the upload is not a format we can read at all.
             UnsupportedSourceFormatError: status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            # 422 — readable, but the content cannot be processed.
             pydantic.ValidationError: status.HTTP_422_UNPROCESSABLE_CONTENT,
             PaginationError: status.HTTP_422_UNPROCESSABLE_CONTENT,
             InvalidSourceFileError: status.HTTP_422_UNPROCESSABLE_CONTENT,
             MissingSourceColumnsError: status.HTTP_422_UNPROCESSABLE_CONTENT,
-            # 500 — the bases land here: an error surfacing as a bare base means
-            # nobody classified it, which is our bug rather than the caller's.
             AppError: status.HTTP_500_INTERNAL_SERVER_ERROR,
             DomainError: status.HTTP_500_INTERNAL_SERVER_ERROR,
             IndexingDomainError: status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -145,7 +138,6 @@ class ExceptionHandler:
             HandlerNotFoundError: status.HTTP_500_INTERNAL_SERVER_ERROR,
             UnregisteredTaskError: status.HTTP_500_INTERNAL_SERVER_ERROR,
             Exception: status.HTTP_500_INTERNAL_SERVER_ERROR,
-            # 503 — a dependency is down; the same request may work shortly.
             RepoError: status.HTTP_503_SERVICE_UNAVAILABLE,
             SearchIndexError: status.HTTP_503_SERVICE_UNAVAILABLE,
             OutboxPublishError: status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -174,8 +166,6 @@ class ExceptionHandler:
             response = ExceptionSchema(message_if_unavailable)
 
         else:
-            # From 500 up the message is ours, and it may name a table, a host
-            # or a query — none of which the caller should be shown.
             message: str = (
                 str(exc)
                 if status_code < self._status_internal_server_error
@@ -193,9 +183,6 @@ class ExceptionHandler:
         else:
             logger.warning("Exception '%s' occurred: '%s'.", type(exc).__name__, exc)
 
-        # ``jsonable_encoder`` because the body is a dataclass: FastAPI only
-        # serialises those automatically for a declared response model, which an
-        # exception handler does not have.
         return JSONResponse(
             status_code=status_code,
             content=jsonable_encoder(response),

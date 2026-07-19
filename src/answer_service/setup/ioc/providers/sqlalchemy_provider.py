@@ -36,7 +36,6 @@ async def get_engine(
 
     Example:
         async for engine in get_engine(config):
-            # Use engine...
     """
     engine: AsyncEngine = create_async_engine(
         postgres_config.uri,

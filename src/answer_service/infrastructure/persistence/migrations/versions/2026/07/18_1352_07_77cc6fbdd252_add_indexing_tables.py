@@ -80,8 +80,6 @@ def upgrade() -> None:
         ["created_at"],
         unique=False,
     )
-    # The relay reads only unprocessed rows; a partial index keeps that scan
-    # proportional to the backlog instead of to the whole history.
     op.create_index(
         "ix_outbox_messages_pending",
         "outbox_messages",

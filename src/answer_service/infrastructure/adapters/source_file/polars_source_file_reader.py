@@ -39,7 +39,6 @@ REQUIRED_COLUMNS: Final[frozenset[str]] = frozenset(
 CSV_SUFFIXES: Final[frozenset[str]] = frozenset({".csv"})
 EXCEL_SUFFIXES: Final[frozenset[str]] = frozenset({".xlsx", ".xls"})
 
-# Modern .xlsx is a zip; legacy .xls is an OLE2 compound document.
 XLSX_MAGIC: Final[bytes] = b"PK\x03\x04"
 XLS_MAGIC: Final[bytes] = b"\xd0\xcf\x11\xe0"
 

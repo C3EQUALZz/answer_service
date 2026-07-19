@@ -37,8 +37,6 @@ class UpsertQAPairHandler(CommandHandler[UpsertQAPairCommand, None]):
     async def handle(self, command: UpsertQAPairCommand) -> None:
         pair = await self._catalog.read_by_id(command.external_id)
         if pair is None:
-            # Deleted between the write and this projection; the removal event
-            # is already in the outbox and will clear the index entry.
             logger.debug(
                 "upsert_qa_pair: '%s' is gone from the catalog, skipping",
                 command.external_id,

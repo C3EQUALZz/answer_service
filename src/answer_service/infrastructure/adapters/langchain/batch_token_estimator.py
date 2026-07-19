@@ -3,12 +3,8 @@ from typing import Final
 from tokenizers import Regex, Tokenizer, models
 from tokenizers.pre_tokenizers import Split
 
-# Mistral averages roughly four characters per token on prose. Three is
-# deliberately pessimistic: overestimating costs one extra embedding request,
-# underestimating gets the batch rejected for exceeding the token limit.
 CHARS_PER_TOKEN: Final[int] = 3
 
-# Named for the placeholder it is, not the credential ruff mistakes it for.
 UNKNOWN_SYMBOL: Final[str] = "<unk>"
 
 

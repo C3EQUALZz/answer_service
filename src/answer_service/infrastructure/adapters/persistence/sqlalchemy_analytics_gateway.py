@@ -63,8 +63,6 @@ class SqlAlchemyAnalyticsGateway(AnalyticsCommandGateway, AnalyticsQueryGateway)
         return QueryStatistics(
             total=row.total,
             unanswered=row.unanswered,
-            # AVG over no rows is NULL, and an idle period must report 0.0
-            # rather than blow up the statistics page.
             average_latency_ms=float(row.average_latency or 0.0),
         )
 
@@ -104,8 +102,6 @@ class SqlAlchemyAnalyticsGateway(AnalyticsCommandGateway, AnalyticsQueryGateway)
         except SQLAlchemyError as e:
             raise RepoError(error_message) from e
 
-        # The text column carries a value object type, so it comes back as
-        # ``QueryText`` rather than a plain string.
         return [
             QueryFrequency(text=row.text.content, occurrences=row.occurrences)
             for row in rows
@@ -125,8 +121,6 @@ class SqlAlchemyAnalyticsGateway(AnalyticsCommandGateway, AnalyticsQueryGateway)
             select(query_logs_table.c.text, occurrences)
             .where(SqlAlchemyAnalyticsGateway._within(period))
             .group_by(query_logs_table.c.text)
-            # Ties on the count would otherwise page unstably: the same row
-            # could appear on two pages, or on none.
             .order_by(ordering, query_logs_table.c.text.asc())
             .limit(pagination.limit)
             .offset(pagination.offset)

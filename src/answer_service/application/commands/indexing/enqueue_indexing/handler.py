@@ -1,3 +1,4 @@
+import logging
 from typing import Final, override
 
 from answer_service.application.commands.indexing.enqueue_indexing.command import (
@@ -15,6 +16,8 @@ from answer_service.application.common.ports.source_file.source_file_storage imp
 from answer_service.domain.indexing.factories.indexing_task_factory import (
     IndexingTaskFactory,
 )
+
+logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 
 class EnqueueIndexingHandler(
@@ -37,20 +40,30 @@ class EnqueueIndexingHandler(
         self,
         command: EnqueueIndexingCommand,
     ) -> EnqueueIndexingResponse:
-        # Fail fast on a malformed file before persisting or scheduling anything.
+        logger.info(
+            "enqueue_indexing: received '%s' (%d bytes)",
+            command.filename,
+            len(command.content),
+        )
+
         await self._source_reader.validate(
             content=command.content,
             filename=command.filename,
         )
+        logger.info("enqueue_indexing: '%s' passed validation", command.filename)
+
         source = await self._source_storage.save(
             content=command.content,
             filename=command.filename,
         )
+        logger.info("enqueue_indexing: staged '%s' at %s", command.filename, source)
 
-        # Queuing records IndexingTaskQueued; the outbox relay turns that into
-        # the run. Scheduling it here would publish before this transaction
-        # commits, and the worker would not find the task row.
         task = self._task_factory.create(source=source)
         await self._task_gateway.add(task)
+        logger.info(
+            "enqueue_indexing: queued task %s with status %s",
+            task.id,
+            task.status,
+        )
 
         return EnqueueIndexingResponse(task_id=task.id, status=task.status)

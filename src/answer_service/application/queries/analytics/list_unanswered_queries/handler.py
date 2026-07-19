@@ -24,8 +24,6 @@ class ListUnansweredQueriesHandler(
         self,
         query: ListUnansweredQueriesQuery,
     ) -> UnansweredQueriesResponse:
-        # ``Pagination`` already rejects a non-positive limit; the ceiling is
-        # this endpoint's own, so one caller cannot ask for the whole log.
         limit = query.pagination.limit
         if limit is not None and limit > MAX_LIMIT:
             msg = f"limit must not exceed {MAX_LIMIT}, got {limit}."

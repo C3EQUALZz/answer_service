@@ -14,9 +14,6 @@ from answer_service.infrastructure.persistence.models.types import (
     QuestionType,
 )
 
-# Must match the literal baked into migration c8a37b2e4d91. Changing it here
-# alone would leave the query using one language and the index another, which
-# degrades quietly rather than failing.
 TEXT_SEARCH_CONFIG: Final[str] = "english"
 
 SEARCH_VECTOR_COLUMN: Final[str] = "search_vector"

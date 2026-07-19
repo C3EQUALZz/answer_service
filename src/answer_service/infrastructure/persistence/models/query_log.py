@@ -35,12 +35,7 @@ query_logs_table: Final[Table] = Table(
     Column("occurred_at", DateTime(timezone=True), nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("updated_at", DateTime(timezone=True), nullable=False),
-    # Every report filters by period first, then groups by text. A composite
-    # index in that order serves both steps, and also covers the period-only
-    # lookups — a separate index on occurred_at would be dead weight on write.
     Index("ix_query_logs_occurred_at_text", "occurred_at", "text"),
-    # The gap report only ever looks at queries that found nothing, which is the
-    # small minority of rows. A partial index keeps it proportional to those.
     Index(
         "ix_query_logs_unanswered",
         "occurred_at",

@@ -48,7 +48,6 @@ def configure_logging(cfg: LoggingConfig) -> None:
         structlog.processors.StackInfoRenderer(),
         structlog.stdlib.PositionalArgumentsFormatter(),
         structlog.processors.UnicodeDecoder(),  # convert bytes to str
-        # structlog.stdlib.render_to_log_kwargs,
         structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
     )
     logging_processors = (structlog.stdlib.ProcessorFormatter.remove_processors_meta,)

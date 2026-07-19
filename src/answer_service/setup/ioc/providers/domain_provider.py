@@ -34,15 +34,12 @@ def make_rrf_fusion() -> RrfFusion:
 def domain_provider() -> Provider:
     """Domain factories, id generators and stateless domain services."""
     provider: Final[Provider] = Provider(scope=Scope.REQUEST)
-    # One collection per request, shared by every aggregate built during it —
-    # this is what lets the events pipeline drain them all in one go.
     provider.provide(make_events_collection, provides=EventsCollection)
     provider.provide(source=UUID4TaskIdGenerator, provides=TaskIdGenerator)
     provider.provide(source=UUID4QueryLogIdGenerator, provides=QueryLogIdGenerator)
     provider.provide(source=QAPairFactory)
     provider.provide(source=IndexingTaskFactory)
     provider.provide(source=QueryLogFactory)
-    # Stateless: their configuration never varies per request.
     provider.provide(source=SyncPlanner, scope=Scope.APP)
     provider.provide(make_rrf_fusion, provides=RrfFusion, scope=Scope.APP)
     return provider

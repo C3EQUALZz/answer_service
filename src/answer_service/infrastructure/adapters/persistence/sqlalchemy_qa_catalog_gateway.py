@@ -156,8 +156,6 @@ class SqlAlchemyQACatalogGateway(QACatalogCommandGateway, QACatalogQueryGateway)
             msg = "Failed to read the catalog statistics."
             raise RepoError(msg) from e
 
-        # The category column carries a value object type, so it comes back as
-        # ``Category`` rather than a plain string.
         return CatalogStatistics(
             total_pairs=total,
             pairs_per_category={row.category.value: row.pairs for row in rows},

@@ -14,14 +14,10 @@ from answer_service.setup.bootstrap.sources.postgres_env_source_factory import (
     PostgresEnvSourceFactory,
 )
 
-# Imperative mappings define the tables, so autogenerate sees empty metadata
-# until they are attached.
 setup_map_tables()
 
 config = context.config
 
-# The URL comes from the same loader the application uses, so migrations can
-# never run against a database the app is not configured for.
 postgres_config = PostgresConfigLoader(PostgresEnvSourceFactory()).load()
 config.set_main_option("sqlalchemy.url", postgres_config.uri)
 
