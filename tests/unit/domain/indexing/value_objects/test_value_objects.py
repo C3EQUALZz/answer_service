@@ -53,8 +53,13 @@ def test_overlong_text_is_rejected() -> None:
 
 
 def test_value_objects_compare_by_value() -> None:
-    assert ExternalId(value="q-1") == ExternalId(value="q-1")
-    assert ExternalId(value="q-1") != ExternalId(value="q-2")
+    """Two separately built objects, so this is value equality, not identity."""
+    one = ExternalId(value="q-1")
+    same_value = ExternalId(value="q-1")
+    other_value = ExternalId(value="q-2")
+
+    assert one == same_value
+    assert one != other_value
 
 
 def make_content(
@@ -71,7 +76,10 @@ def make_content(
 
 def test_the_same_content_always_hashes_the_same() -> None:
     """Sync idempotency rests entirely on this."""
-    assert make_content().fingerprint == make_content().fingerprint
+    first = make_content()
+    second = make_content()
+
+    assert first.fingerprint == second.fingerprint
 
 
 @pytest.mark.parametrize(

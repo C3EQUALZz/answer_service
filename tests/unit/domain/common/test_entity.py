@@ -11,9 +11,17 @@ class SampleEntity(Entity[str]):
 
 
 def test_two_entities_with_the_same_id_are_equal() -> None:
-    """Identity, not attribute equality — that is what makes it an entity."""
-    assert SampleEntity(id="a") == SampleEntity(id="a")
-    assert SampleEntity(id="a") != SampleEntity(id="b")
+    """Identity, not attribute equality — that is what makes it an entity.
+
+    Two separately constructed instances, so what is asserted is equality by id
+    rather than an object being equal to itself.
+    """
+    one = SampleEntity(id="a")
+    same_id = SampleEntity(id="a")
+    other_id = SampleEntity(id="b")
+
+    assert one == same_id
+    assert one != other_id
 
 
 def test_entities_hash_by_id() -> None:
