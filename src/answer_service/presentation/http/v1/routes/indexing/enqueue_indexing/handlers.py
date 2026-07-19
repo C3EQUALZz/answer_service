@@ -8,7 +8,10 @@ from answer_service.application.commands.indexing.enqueue_indexing.command impor
     EnqueueIndexingCommand,
 )
 from answer_service.application.common.mediator.sender import Sender
-from answer_service.presentation.http.v1.common.exception_handler import ExceptionSchema
+from answer_service.presentation.http.v1.common.exception_handler import (
+    ExceptionSchema,
+    ExceptionSchemaRich,
+)
 from answer_service.presentation.http.v1.routes.indexing.enqueue_indexing.schemas import (
     EnqueueIndexingResponse,
 )
@@ -29,7 +32,11 @@ SourceFile = File(
     status_code=status.HTTP_202_ACCEPTED,
     summary="Upload a source file and schedule a synchronization",
     responses={
-        status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ExceptionSchema},
+        status.HTTP_400_BAD_REQUEST: {"model": ExceptionSchema},
+        status.HTTP_415_UNSUPPORTED_MEDIA_TYPE: {"model": ExceptionSchema},
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ExceptionSchemaRich},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"model": ExceptionSchema},
+        status.HTTP_503_SERVICE_UNAVAILABLE: {"model": ExceptionSchema},
     },
 )
 async def enqueue_indexing_handler(

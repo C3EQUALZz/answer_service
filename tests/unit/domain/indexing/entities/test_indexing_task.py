@@ -53,8 +53,10 @@ def test_a_queued_task_cannot_be_completed() -> None:
     """Completing work that never started would report stats nobody produced."""
     task, _ = make_queued_indexing_task()
 
+    stats = SyncStats.empty()
+
     with pytest.raises(InvalidTaskTransitionError):
-        task.complete(SyncStats.empty())
+        task.complete(stats)
 
 
 def test_a_finished_task_cannot_be_completed_again() -> None:
@@ -62,8 +64,10 @@ def test_a_finished_task_cannot_be_completed_again() -> None:
     task.start()
     task.complete(SyncStats.empty())
 
+    stats = SyncStats.empty()
+
     with pytest.raises(InvalidTaskTransitionError):
-        task.complete(SyncStats.empty())
+        task.complete(stats)
 
 
 @pytest.mark.parametrize("started", (True, False))
@@ -89,8 +93,10 @@ def test_a_terminal_task_cannot_fail(terminal_call: str) -> None:
     else:
         task.fail(FailureInfo(code="First", message="first failure"))
 
+    failure = FailureInfo(code="Second", message="late failure")
+
     with pytest.raises(InvalidTaskTransitionError):
-        task.fail(FailureInfo(code="Second", message="late failure"))
+        task.fail(failure)
 
 
 def test_the_full_lifecycle_emits_its_events_in_order() -> None:

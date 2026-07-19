@@ -31,8 +31,10 @@ def test_uses_defaults_when_nothing_is_provided() -> None:
 
 
 def test_rejects_an_unknown_log_level() -> None:
+    loader = LoggingConfigLoader(logging_source_stub(LOG_LEVEL="TRACE"))
+
     with pytest.raises(DatureConfigError) as excinfo:
-        LoggingConfigLoader(logging_source_stub(LOG_LEVEL="TRACE")).load()
+        loader.load()
 
     rendered = render_exception(excinfo.value)
     assert "LOG_LEVEL" in rendered or "level" in rendered

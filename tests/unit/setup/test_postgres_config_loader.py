@@ -18,8 +18,10 @@ def test_loads_and_maps_all_fields_from_env_names() -> None:
 
 @pytest.mark.parametrize("port", ("0", "65536", "-1"))
 def test_rejects_port_outside_the_valid_range(port: str) -> None:
+    loader = PostgresConfigLoader(postgres_source_stub(POSTGRES_PORT=port))
+
     with pytest.raises(DatureConfigError) as excinfo:
-        PostgresConfigLoader(postgres_source_stub(POSTGRES_PORT=port)).load()
+        loader.load()
 
     assert "POSTGRES_PORT must be between 1 and 65535" in render_exception(excinfo.value)
 
@@ -38,8 +40,10 @@ def test_password_is_masked_in_error_output() -> None:
         POSTGRES_PORT="999999",
     )
 
+    loader = PostgresConfigLoader(stub)
+
     with pytest.raises(DatureConfigError) as excinfo:
-        PostgresConfigLoader(stub).load()
+        loader.load()
 
     assert "TOP-SECRET-VALUE" not in render_exception(excinfo.value)
 

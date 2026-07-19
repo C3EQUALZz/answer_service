@@ -101,8 +101,10 @@ async def test_a_missing_column_is_caught_on_upload_not_in_the_worker(
     reader: PolarsSourceFileReader,
 ) -> None:
     """Validation exists so a broken file never becomes a queued task."""
+    content = make_csv_bytes_without("answer")
+
     with pytest.raises(MissingSourceColumnsError):
-        await reader.validate(content=make_csv_bytes_without("answer"), filename="f.csv")
+        await reader.validate(content=content, filename="f.csv")
 
 
 async def test_unreadable_bytes_are_rejected(reader: PolarsSourceFileReader) -> None:

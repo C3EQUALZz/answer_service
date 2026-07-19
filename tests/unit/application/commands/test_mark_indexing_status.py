@@ -111,8 +111,10 @@ async def test_marking_running_raises_when_the_task_is_missing(
 ) -> None:
     handler = MarkIndexingRunningHandler(task_gateway)
 
+    command = MarkIndexingRunningCommand(task_id=make_task_id())
+
     with pytest.raises(IndexingTaskNotFoundError):
-        await handler.handle(MarkIndexingRunningCommand(task_id=make_task_id()))
+        await handler.handle(command)
 
 
 async def test_marking_failed_raises_when_the_task_is_missing(
@@ -120,11 +122,11 @@ async def test_marking_failed_raises_when_the_task_is_missing(
 ) -> None:
     handler = MarkIndexingFailedHandler(task_gateway)
 
+    command = MarkIndexingFailedCommand(
+        task_id=make_task_id(),
+        code="Boom",
+        message="gone",
+    )
+
     with pytest.raises(IndexingTaskNotFoundError):
-        await handler.handle(
-            MarkIndexingFailedCommand(
-                task_id=make_task_id(),
-                code="Boom",
-                message="gone",
-            ),
-        )
+        await handler.handle(command)

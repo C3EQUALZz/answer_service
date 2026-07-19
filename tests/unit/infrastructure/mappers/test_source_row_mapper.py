@@ -44,15 +44,19 @@ def test_a_blank_external_id_is_refused_while_mapping() -> None:
     """
     mapper = AdaptixSourceRowMapper()
 
+    row = make_source_row("   ")
+
     with pytest.raises(EmptyExternalIdError):
-        mapper.to_desired_pair(make_source_row("   "))
+        mapper.to_desired_pair(row)
 
 
 def test_a_blank_question_is_refused_while_mapping() -> None:
     mapper = AdaptixSourceRowMapper()
 
+    row = make_source_row("faq-1", question=" ")
+
     with pytest.raises(EmptyQuestionError):
-        mapper.to_desired_pair(make_source_row("faq-1", question=" "))
+        mapper.to_desired_pair(row)
 
 
 def test_mapping_is_a_pure_function_of_the_row() -> None:

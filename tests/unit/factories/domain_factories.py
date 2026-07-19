@@ -40,7 +40,10 @@ def make_task_id(value: str = "11111111-1111-1111-1111-111111111111") -> TaskId:
     return TaskId(UUID(value))
 
 
-def make_source_reference(value: str = "uploads/faq.csv") -> SourceReference:
+SOURCE_PATH: str = "uploads/faq.csv"
+
+
+def make_source_reference(value: str = SOURCE_PATH) -> SourceReference:
     return SourceReference(value=value)
 
 
@@ -115,7 +118,7 @@ def make_indexing_task_view(
     return IndexingTaskView(
         task_id=task_id if task_id is not None else make_task_id(),
         status=status,
-        source="uploads/faq.csv",
+        source=SOURCE_PATH,
         created_at=SOURCE_UPDATED_AT,
         started_at=SOURCE_UPDATED_AT,
         finished_at=SOURCE_UPDATED_AT,
@@ -148,7 +151,7 @@ def make_registered_qa_pair(
 
 
 def make_queued_indexing_task(
-    source: str = "uploads/faq.csv",
+    source: str = SOURCE_PATH,
 ) -> tuple[IndexingTask, EventsCollection]:
     """A queued task together with the collection it reports to."""
     collection = make_events_collection()

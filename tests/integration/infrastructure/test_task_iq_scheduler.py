@@ -71,8 +71,10 @@ async def test_publishing_an_event_with_no_task_fails_loudly(
     """A dropped event would leave the index or an upload silently behind."""
     message = make_outbox_message(event_type="NobodyRegisteredThis")
 
+    publisher = TaskSchedulerOutboxPublisher(scheduler)
+
     with pytest.raises(UnregisteredTaskError, match="NobodyRegisteredThis"):
-        await TaskSchedulerOutboxPublisher(scheduler).publish(message)
+        await publisher.publish(message)
 
 
 async def test_the_publisher_lands_on_the_task_named_after_the_event(

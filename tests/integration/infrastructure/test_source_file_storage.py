@@ -60,5 +60,7 @@ async def test_reading_a_missing_file_fails_as_a_storage_error(
     storage: LocalSourceFileStorage,
 ) -> None:
     """The worker may run after the staged file was cleaned up."""
+    missing = SourceReference(value="/nowhere/at/all.csv")
+
     with pytest.raises(SourceFileStorageError):
-        await storage.open(SourceReference(value="/nowhere/at/all.csv"))
+        await storage.open(missing)

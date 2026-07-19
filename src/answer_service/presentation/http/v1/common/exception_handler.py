@@ -6,6 +6,7 @@ from typing import Any, Final
 import pydantic
 from fastapi import FastAPI, status
 from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 
@@ -59,6 +60,7 @@ from answer_service.domain.search.errors import (
     TopKOutOfRangeError,
 )
 from answer_service.infrastructure.errors import (
+    AnswerGenerationError,
     HandlerNotFoundError,
     InfrastructureError,
     OutboxPublishError,
@@ -125,6 +127,7 @@ class ExceptionHandler:
             DuplicateExternalIdError: status.HTTP_409_CONFLICT,
             UnsupportedSourceFormatError: status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             pydantic.ValidationError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+            RequestValidationError: status.HTTP_422_UNPROCESSABLE_CONTENT,
             PaginationError: status.HTTP_422_UNPROCESSABLE_CONTENT,
             InvalidSourceFileError: status.HTTP_422_UNPROCESSABLE_CONTENT,
             MissingSourceColumnsError: status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -142,6 +145,7 @@ class ExceptionHandler:
             SearchIndexError: status.HTTP_503_SERVICE_UNAVAILABLE,
             OutboxPublishError: status.HTTP_503_SERVICE_UNAVAILABLE,
             SourceFileStorageError: status.HTTP_503_SERVICE_UNAVAILABLE,
+            AnswerGenerationError: status.HTTP_503_SERVICE_UNAVAILABLE,
         },
     )
 
@@ -156,7 +160,13 @@ class ExceptionHandler:
         )
 
         response: ExceptionSchema | ExceptionSchemaRich
-        if isinstance(exc, pydantic.ValidationError):
+        if isinstance(exc, RequestValidationError):
+            response = ExceptionSchemaRich(
+                "Request validation failed.",
+                jsonable_encoder(exc.errors()),
+            )
+
+        elif isinstance(exc, pydantic.ValidationError):
             response = ExceptionSchemaRich(str(exc), jsonable_encoder(exc.errors()))
 
         elif status_code == status.HTTP_503_SERVICE_UNAVAILABLE:

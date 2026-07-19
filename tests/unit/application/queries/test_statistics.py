@@ -180,13 +180,13 @@ async def test_a_limit_above_the_ceiling_is_rejected(
     list_unanswered_handler: ListUnansweredQueriesHandler,
 ) -> None:
     """The ceiling stops one caller from pulling the whole query log."""
+    query = ListUnansweredQueriesQuery(
+        period=WINDOW,
+        pagination=Pagination(limit=MAX_LIMIT + 1),
+    )
+
     with pytest.raises(PaginationError, match="200"):
-        await list_unanswered_handler.handle(
-            ListUnansweredQueriesQuery(
-                period=WINDOW,
-                pagination=Pagination(limit=MAX_LIMIT + 1),
-            ),
-        )
+        await list_unanswered_handler.handle(query)
 
 
 async def test_the_backlog_can_be_paged_through(
@@ -236,5 +236,7 @@ async def test_ascending_order_surfaces_the_rarest_gaps_first(
 def test_a_period_cannot_end_before_it_starts() -> None:
     now = datetime.now(UTC)
 
+    earlier = now - timedelta(days=1)
+
     with pytest.raises(Exception, match="cannot precede"):
-        Period(start=now, end=now - timedelta(days=1))
+        Period(start=now, end=earlier)

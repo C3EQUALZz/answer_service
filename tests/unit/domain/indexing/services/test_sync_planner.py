@@ -74,11 +74,10 @@ def test_all_four_outcomes_in_one_run(planner: SyncPlanner) -> None:
 
 def test_a_duplicated_external_id_aborts_the_plan(planner: SyncPlanner) -> None:
     """Two rows claiming one id make the outcome depend on ordering."""
+    desired = [make_desired_pair("q-1"), make_desired_pair("q-1", answer="other")]
+
     with pytest.raises(DuplicateExternalIdError, match="q-1"):
-        planner.plan(
-            desired=[make_desired_pair("q-1"), make_desired_pair("q-1", answer="other")],
-            current={},
-        )
+        planner.plan(desired=desired, current={})
 
 
 def test_an_empty_source_against_an_empty_catalog_does_nothing(

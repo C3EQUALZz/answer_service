@@ -11,7 +11,10 @@ from answer_service.application.queries.analytics.list_unanswered_queries.query 
     ListUnansweredQueriesQuery,
 )
 from answer_service.domain.analytics.value_objects.period import Period
-from answer_service.presentation.http.v1.common.exception_handler import ExceptionSchema
+from answer_service.presentation.http.v1.common.exception_handler import (
+    ExceptionSchema,
+    ExceptionSchemaRich,
+)
 
 from .schemas import UnansweredQueriesSchemaResponse
 
@@ -52,7 +55,9 @@ OffsetQuery = Query(
     "/unanswered",
     summary="Questions the catalog could not answer",
     responses={
-        status.HTTP_400_BAD_REQUEST: {"model": ExceptionSchema},
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ExceptionSchemaRich},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"model": ExceptionSchema},
+        status.HTTP_503_SERVICE_UNAVAILABLE: {"model": ExceptionSchema},
     },
 )
 async def list_unanswered_queries_handler(

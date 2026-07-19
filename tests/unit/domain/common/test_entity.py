@@ -44,9 +44,7 @@ def test_other_attributes_stay_mutable() -> None:
 def test_updated_at_cannot_precede_created_at() -> None:
     created = datetime.now(UTC)
 
+    stale = created - timedelta(seconds=1)
+
     with pytest.raises(InconsistentTimeError):
-        SampleEntity(
-            id="a",
-            created_at=created,
-            updated_at=created - timedelta(seconds=1),
-        )
+        SampleEntity(id="a", created_at=created, updated_at=stale)

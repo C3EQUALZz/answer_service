@@ -59,7 +59,7 @@ async def test_reports_whether_polling_can_stop(
 async def test_raises_for_an_unknown_task(
     get_indexing_task_handler: GetIndexingTaskHandler,
 ) -> None:
+    query = GetIndexingTaskQuery(task_id=make_task_id())
+
     with pytest.raises(IndexingTaskNotFoundError):
-        await get_indexing_task_handler.handle(
-            GetIndexingTaskQuery(task_id=make_task_id()),
-        )
+        await get_indexing_task_handler.handle(query)

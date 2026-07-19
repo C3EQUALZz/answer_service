@@ -53,7 +53,7 @@ async def get_engine(
     logger.debug("Engine is disposed.")
 
 
-async def get_sessionmaker(  # ruff:ignore[unused-async]
+def get_sessionmaker(
     engine: AsyncEngine,
     alchemy_config: SQLAlchemyConfig,
 ) -> async_sessionmaker[AsyncSession]:

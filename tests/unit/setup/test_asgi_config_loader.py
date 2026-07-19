@@ -15,8 +15,10 @@ def test_loads_and_maps_all_fields_from_env_names() -> None:
 
 @pytest.mark.parametrize("port", ("0", "65536", "-1"))
 def test_rejects_port_outside_the_valid_range(port: str) -> None:
+    loader = ASGIConfigLoader(asgi_source_stub(UVICORN_PORT=port))
+
     with pytest.raises(DatureConfigError) as excinfo:
-        ASGIConfigLoader(asgi_source_stub(UVICORN_PORT=port)).load()
+        loader.load()
 
     assert "UVICORN_PORT must be between 1 and 65535" in render_exception(excinfo.value)
 

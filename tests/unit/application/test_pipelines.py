@@ -70,8 +70,10 @@ async def test_a_failing_handler_rolls_back_and_publishes_nothing(
     """The events of a rolled-back run must never reach the bus."""
     handler = run_indexing_handler([make_source_row("q-1"), make_source_row("q-1")])
 
+    command = RunIndexingCommand(task_id=running_task.id)
+
     with pytest.raises(DuplicateExternalIdError):
-        await pipeline_runner(RunIndexingCommand(task_id=running_task.id), handler)
+        await pipeline_runner(command, handler)
 
     assert journal.entries == ["rollback"]
     assert event_bus.published == []

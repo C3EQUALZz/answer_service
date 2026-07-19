@@ -171,11 +171,10 @@ async def test_a_handler_error_reaches_the_caller_and_records_nothing(
         msg = "the retriever is down"
         raise AppError(msg)
 
+    query = SearchQAPairsQuery(criteria=criteria())
+
     with pytest.raises(AppError):
-        await query_recording_pipeline.handle(
-            SearchQAPairsQuery(criteria=criteria()),
-            handle_next,
-        )
+        await query_recording_pipeline.handle(query, handle_next)
 
     assert analytics.logs == []
 

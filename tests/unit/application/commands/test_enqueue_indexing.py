@@ -49,8 +49,10 @@ async def test_rejects_a_bad_file_before_touching_storage_or_the_queue(
     """Validation is the fail-fast gate: nothing may be persisted behind it."""
     handler = enqueue_indexing_handler(rejects=True)
 
+    command = make_enqueue_indexing_command()
+
     with pytest.raises(UnsupportedSourceFormatError):
-        await handler.handle(make_enqueue_indexing_command())
+        await handler.handle(command)
 
     assert source_storage.saved == []
     assert task_gateway.tasks == {}

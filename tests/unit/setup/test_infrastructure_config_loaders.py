@@ -51,8 +51,10 @@ def test_nats_includes_credentials_when_a_user_is_set() -> None:
 
 @pytest.mark.parametrize("port", ("0", "65536", "-1"))
 def test_nats_rejects_a_port_outside_the_valid_range(port: str) -> None:
+    loader = NatsConfigLoader(nats_source_stub(NATS_PORT=port))
+
     with pytest.raises(DatureConfigError) as excinfo:
-        NatsConfigLoader(nats_source_stub(NATS_PORT=port)).load()
+        loader.load()
 
     assert "NATS_PORT must be between 1 and 65535" in render_exception(excinfo.value)
 
@@ -60,8 +62,10 @@ def test_nats_rejects_a_port_outside_the_valid_range(port: str) -> None:
 def test_nats_password_is_masked_in_error_output() -> None:
     stub = nats_source_stub(NATS_PASSWORD="TOP-SECRET-VALUE", NATS_PORT="999999")
 
+    loader = NatsConfigLoader(stub)
+
     with pytest.raises(DatureConfigError) as excinfo:
-        NatsConfigLoader(stub).load()
+        loader.load()
 
     assert "TOP-SECRET-VALUE" not in render_exception(excinfo.value)
 
@@ -92,8 +96,10 @@ def test_redis_names_the_acl_user_when_one_is_set() -> None:
 
 def test_redis_rejects_a_user_without_a_password() -> None:
     """An ACL user with no password silently degrades to an anonymous connect."""
+    loader = RedisConfigLoader(redis_source_stub(REDIS_USER="app"))
+
     with pytest.raises(DatureConfigError) as excinfo:
-        RedisConfigLoader(redis_source_stub(REDIS_USER="app")).load()
+        loader.load()
 
     assert "REDIS_USER requires REDIS_PASSWORD" in render_exception(excinfo.value)
 
@@ -101,16 +107,20 @@ def test_redis_rejects_a_user_without_a_password() -> None:
 def test_redis_password_is_masked_in_error_output() -> None:
     stub = redis_source_stub(REDIS_PASSWORD="TOP-SECRET-VALUE", REDIS_PORT="999999")
 
+    loader = RedisConfigLoader(stub)
+
     with pytest.raises(DatureConfigError) as excinfo:
-        RedisConfigLoader(stub).load()
+        loader.load()
 
     assert "TOP-SECRET-VALUE" not in render_exception(excinfo.value)
 
 
 @pytest.mark.parametrize("db_index", ("-1", "16"))
 def test_redis_rejects_a_database_index_outside_the_valid_range(db_index: str) -> None:
+    loader = RedisConfigLoader(redis_source_stub(REDIS_WORKER_DB=db_index))
+
     with pytest.raises(DatureConfigError) as excinfo:
-        RedisConfigLoader(redis_source_stub(REDIS_WORKER_DB=db_index)).load()
+        loader.load()
 
     assert "REDIS_WORKER_DB" in render_exception(excinfo.value)
 
@@ -119,8 +129,10 @@ def test_redis_rejects_two_purposes_sharing_a_database() -> None:
     """Silently sharing a database is the failure this catches at startup."""
     stub = redis_source_stub(REDIS_WORKER_DB="1", REDIS_SCHEDULE_SOURCE_DB="1")
 
+    loader = RedisConfigLoader(stub)
+
     with pytest.raises(DatureConfigError) as excinfo:
-        RedisConfigLoader(stub).load()
+        loader.load()
 
     assert "different database indexes" in render_exception(excinfo.value)
 
@@ -147,15 +159,19 @@ def test_taskiq_rejects_a_nonsensical_retry_policy(
     value: str,
     expected: str,
 ) -> None:
+    loader = TaskIQConfigLoader(taskiq_source_stub(**{variable: value}))
+
     with pytest.raises(DatureConfigError) as excinfo:
-        TaskIQConfigLoader(taskiq_source_stub(**{variable: value})).load()
+        loader.load()
 
     assert expected in render_exception(excinfo.value)
 
 
 def test_mistral_requires_an_api_key() -> None:
+    loader = MistralConfigLoader(mistral_source_stub(MISTRAL_API_KEY="   "))
+
     with pytest.raises(DatureConfigError) as excinfo:
-        MistralConfigLoader(mistral_source_stub(MISTRAL_API_KEY="   ")).load()
+        loader.load()
 
     assert "MISTRAL_API_KEY must not be empty" in render_exception(excinfo.value)
 
@@ -167,8 +183,10 @@ def test_mistral_api_key_is_masked_in_error_output() -> None:
         MISTRAL_TEMPERATURE="99",
     )
 
+    loader = MistralConfigLoader(stub)
+
     with pytest.raises(DatureConfigError) as excinfo:
-        MistralConfigLoader(stub).load()
+        loader.load()
 
     assert "sk-TOP-SECRET-VALUE" not in render_exception(excinfo.value)
 
@@ -179,8 +197,10 @@ def test_mistral_rejects_a_temperature_outside_the_valid_range(
 ) -> None:
     stub = mistral_source_stub(MISTRAL_TEMPERATURE=temperature)
 
+    loader = MistralConfigLoader(stub)
+
     with pytest.raises(DatureConfigError) as excinfo:
-        MistralConfigLoader(stub).load()
+        loader.load()
 
     assert "MISTRAL_TEMPERATURE must be between" in render_exception(excinfo.value)
 
@@ -189,8 +209,10 @@ def test_mistral_rejects_a_non_positive_embedding_dimension() -> None:
     """The dimension is baked into the Qdrant collection; zero is unrecoverable."""
     stub = mistral_source_stub(MISTRAL_EMBEDDING_DIMENSION="0")
 
+    loader = MistralConfigLoader(stub)
+
     with pytest.raises(DatureConfigError) as excinfo:
-        MistralConfigLoader(stub).load()
+        loader.load()
 
     assert "MISTRAL_EMBEDDING_DIMENSION must be positive" in render_exception(
         excinfo.value,
@@ -212,16 +234,20 @@ def test_qdrant_switches_to_https_when_asked() -> None:
 def test_qdrant_requires_a_collection_name() -> None:
     stub = qdrant_source_stub(QDRANT_COLLECTION_NAME=" ")
 
+    loader = QdrantConfigLoader(stub)
+
     with pytest.raises(DatureConfigError) as excinfo:
-        QdrantConfigLoader(stub).load()
+        loader.load()
 
     assert "QDRANT_COLLECTION_NAME must not be empty" in render_exception(excinfo.value)
 
 
 @pytest.mark.parametrize("port", ("0", "65536"))
 def test_qdrant_rejects_a_port_outside_the_valid_range(port: str) -> None:
+    loader = QdrantConfigLoader(qdrant_source_stub(QDRANT_PORT=port))
+
     with pytest.raises(DatureConfigError) as excinfo:
-        QdrantConfigLoader(qdrant_source_stub(QDRANT_PORT=port)).load()
+        loader.load()
 
     assert "QDRANT_PORT must be between 1 and 65535" in render_exception(excinfo.value)
 
@@ -229,8 +255,10 @@ def test_qdrant_rejects_a_port_outside_the_valid_range(port: str) -> None:
 def test_qdrant_api_key_is_masked_in_error_output() -> None:
     stub = qdrant_source_stub(QDRANT_API_KEY="TOP-SECRET-VALUE", QDRANT_PORT="999999")
 
+    loader = QdrantConfigLoader(stub)
+
     with pytest.raises(DatureConfigError) as excinfo:
-        QdrantConfigLoader(stub).load()
+        loader.load()
 
     assert "TOP-SECRET-VALUE" not in render_exception(excinfo.value)
 

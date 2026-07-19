@@ -56,8 +56,10 @@ def test_a_negative_result_count_is_rejected() -> None:
 
 
 def test_a_period_cannot_end_before_it_starts() -> None:
+    earlier = NOW - timedelta(seconds=1)
+
     with pytest.raises(InvalidPeriodError):
-        Period(start=NOW, end=NOW - timedelta(seconds=1))
+        Period(start=NOW, end=earlier)
 
 
 def test_an_empty_period_is_allowed() -> None:

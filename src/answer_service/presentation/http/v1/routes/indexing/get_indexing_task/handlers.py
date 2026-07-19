@@ -10,7 +10,10 @@ from answer_service.application.queries.indexing.get_indexing_task.query import 
     GetIndexingTaskQuery,
 )
 from answer_service.domain.indexing.value_objects.task_id import TaskId
-from answer_service.presentation.http.v1.common.exception_handler import ExceptionSchema
+from answer_service.presentation.http.v1.common.exception_handler import (
+    ExceptionSchema,
+    ExceptionSchemaRich,
+)
 
 from .schemas import IndexingTaskResponse
 
@@ -31,6 +34,9 @@ TaskIdPath = Path(
     summary="Read the status of a synchronization run",
     responses={
         status.HTTP_404_NOT_FOUND: {"model": ExceptionSchema},
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ExceptionSchemaRich},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"model": ExceptionSchema},
+        status.HTTP_503_SERVICE_UNAVAILABLE: {"model": ExceptionSchema},
     },
 )
 async def get_indexing_task_handler(

@@ -32,8 +32,10 @@ async def test_dispatches_to_the_registered_handler(
 
 
 async def test_raises_when_no_handler_is_registered(mediator: MediatorImpl) -> None:
+    command = UnregisteredCommand()
+
     with pytest.raises(HandlerNotFoundError, match="UnregisteredCommand"):
-        await mediator.send(UnregisteredCommand())
+        await mediator.send(command)
 
 
 async def test_runs_without_pipelines(
@@ -81,8 +83,10 @@ async def test_a_failure_unwinds_the_pipelines_outwards(
     registry.add_request_handler(FailingCommand, FailingHandler)
     registry.add_pipeline_handlers(Command, OuterPipeline, InnerPipeline)
 
+    command = FailingCommand()
+
     with pytest.raises(HandlerFailedError):
-        await mediator.send(FailingCommand())
+        await mediator.send(command)
 
     assert journal.entries == [
         "outer:enter",

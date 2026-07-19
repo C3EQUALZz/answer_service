@@ -101,8 +101,10 @@ async def test_a_duplicated_external_id_aborts_the_run(
     """The handler must propagate so the transaction pipeline rolls the work back."""
     handler = run_indexing_handler([make_source_row("q-1"), make_source_row("q-1")])
 
+    command = RunIndexingCommand(task_id=running_task.id)
+
     with pytest.raises(DuplicateExternalIdError):
-        await handler.handle(RunIndexingCommand(task_id=running_task.id))
+        await handler.handle(command)
 
     assert catalog.added == []
     assert running_task.status is IndexingTaskStatus.RUNNING
@@ -113,8 +115,10 @@ async def test_raises_when_the_task_is_missing(
 ) -> None:
     handler = run_indexing_handler()
 
+    command = RunIndexingCommand(task_id=make_task_id())
+
     with pytest.raises(IndexingTaskNotFoundError):
-        await handler.handle(RunIndexingCommand(task_id=make_task_id()))
+        await handler.handle(command)
 
 
 async def test_removal_goes_through_the_aggregate(

@@ -80,8 +80,10 @@ def test_a_rank_starts_at_one() -> None:
 
     assert RankedResult(external_id=ExternalId(value="q-1"), rank=1, scores=scores)
 
+    external_id = ExternalId(value="q-1")
+
     with pytest.raises(InvalidRankError):
-        RankedResult(external_id=ExternalId(value="q-1"), rank=0, scores=scores)
+        RankedResult(external_id=external_id, rank=0, scores=scores)
 
 
 def test_scores_may_come_from_one_retriever_only() -> None:

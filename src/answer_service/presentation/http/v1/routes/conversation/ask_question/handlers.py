@@ -9,7 +9,10 @@ from answer_service.application.common.mediator.sender import Sender
 from answer_service.application.queries.conversation.ask_question.query import (
     AskQuestionQuery,
 )
-from answer_service.presentation.http.v1.common.exception_handler import ExceptionSchema
+from answer_service.presentation.http.v1.common.exception_handler import (
+    ExceptionSchema,
+    ExceptionSchemaRich,
+)
 from answer_service.presentation.http.v1.common.schemas import elapsed_ms
 
 from .schemas import AskRequest, AskSchemaResponse
@@ -24,7 +27,9 @@ ask_question_router: Final[APIRouter] = APIRouter(
     "/",
     summary="Answer a question from the catalog, with its sources",
     responses={
-        status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ExceptionSchema},
+        status.HTTP_400_BAD_REQUEST: {"model": ExceptionSchema},
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ExceptionSchemaRich},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"model": ExceptionSchema},
         status.HTTP_503_SERVICE_UNAVAILABLE: {"model": ExceptionSchema},
     },
 )

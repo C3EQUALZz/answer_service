@@ -28,6 +28,7 @@ async def test_a_message_is_scheduled_under_the_name_of_its_event() -> None:
 
     await TaskSchedulerOutboxPublisher(scheduler).publish(message)
 
+    assert len(scheduler.scheduled) == 1
     task_id, _ = scheduler.scheduled[0]
     assert task_id.split(":")[0] == "IndexingTaskQueued"
 
@@ -58,6 +59,7 @@ async def test_the_stored_body_reaches_the_task_that_parses_it() -> None:
 
     await TaskSchedulerOutboxPublisher(scheduler).publish(message)
 
+    assert len(scheduler.scheduled) == 1
     _, payload = scheduler.scheduled[0]
     delivered = OutboxEventPayload[IndexingTaskQueuedBody].model_validate(
         json.loads(payload.model_dump_json()),

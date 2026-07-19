@@ -2,13 +2,17 @@ from typing import Annotated, Final
 
 from dishka import FromDishka
 from dishka.integrations.fastapi import DishkaRoute
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, status
 
 from answer_service.application.common.mediator.sender import Sender
 from answer_service.application.queries.analytics.get_statistics.query import (
     GetStatisticsQuery,
 )
 from answer_service.domain.analytics.value_objects.period import Period
+from answer_service.presentation.http.v1.common.exception_handler import (
+    ExceptionSchema,
+    ExceptionSchemaRich,
+)
 from answer_service.presentation.http.v1.routes.statistics.get_statistics.schemas import (
     StatisticsSchemaResponse,
 )
@@ -33,6 +37,11 @@ DaysQuery = Query(
 @get_statistics_router.get(
     "/",
     summary="Catalog size and query usage for a period",
+    responses={
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ExceptionSchemaRich},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"model": ExceptionSchema},
+        status.HTTP_503_SERVICE_UNAVAILABLE: {"model": ExceptionSchema},
+    },
 )
 async def get_statistics_handler(
     sender: FromDishka[Sender],

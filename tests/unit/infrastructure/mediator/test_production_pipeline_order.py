@@ -66,8 +66,10 @@ async def test_a_failure_rolls_back_without_publishing() -> None:
     mediator, registry = build_mediator(journal)
     registry.add_request_handler(FailingCommand, FailingHandler)
 
+    command = FailingCommand()
+
     with pytest.raises(HandlerFailedError):
-        await mediator.send(FailingCommand())
+        await mediator.send(command)
 
     assert journal.entries == ["handler", "rollback"]
     assert "publish" not in journal.entries
