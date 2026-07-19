@@ -23,11 +23,15 @@ from answer_service.application.commands.search.upsert_qa_pair.handler import (
     UpsertQAPairHandler,
 )
 from answer_service.application.common.ports.source_file.source_row import SourceRow
+from answer_service.application.queries.search.search_qa_pairs.handler import (
+    SearchQAPairsHandler,
+)
 from answer_service.domain.indexing.factories.indexing_task_factory import (
     IndexingTaskFactory,
 )
 from answer_service.domain.indexing.factories.qa_pair_factory import QAPairFactory
 from answer_service.domain.indexing.services.sync_planner import SyncPlanner
+from answer_service.domain.search.services.rrf_fusion import RrfFusion
 from tests.unit.stubs.gateways import (
     InMemoryIndexingTaskGateway,
     InMemoryOutboxGateway,
@@ -36,6 +40,8 @@ from tests.unit.stubs.gateways import (
 from tests.unit.stubs.infrastructure import (
     RecordingOutboxPublisher,
     RecordingSearchIndexWriter,
+    StubDenseRetriever,
+    StubLexicalRetriever,
 )
 from tests.unit.stubs.source_file import (
     StubSourceFileReader,
@@ -104,6 +110,20 @@ def create_upsert_qa_pair_handler(
     index_writer: RecordingSearchIndexWriter,
 ) -> UpsertQAPairHandler:
     return UpsertQAPairHandler(catalog, index_writer)
+
+
+def create_search_qa_pairs_handler(
+    *,
+    catalog: InMemoryQACatalog,
+    dense_retriever: StubDenseRetriever,
+    lexical_retriever: StubLexicalRetriever,
+) -> SearchQAPairsHandler:
+    return SearchQAPairsHandler(
+        dense_retriever,
+        lexical_retriever,
+        RrfFusion(),
+        catalog,
+    )
 
 
 def create_remove_qa_pair_handler(

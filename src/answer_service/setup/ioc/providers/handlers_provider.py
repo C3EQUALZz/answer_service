@@ -35,6 +35,9 @@ from answer_service.application.queries.analytics.list_unanswered_queries.handle
 from answer_service.application.queries.indexing.get_indexing_task.handler import (
     GetIndexingTaskHandler,
 )
+from answer_service.application.queries.search.search_qa_pairs.handler import (
+    SearchQAPairsHandler,
+)
 
 
 def handlers_provider() -> Provider:
@@ -57,5 +60,6 @@ def handlers_provider() -> Provider:
         GetIndexingTaskHandler,
         GetStatisticsHandler,
         ListUnansweredQueriesHandler,
+        SearchQAPairsHandler,
     )
     return provider

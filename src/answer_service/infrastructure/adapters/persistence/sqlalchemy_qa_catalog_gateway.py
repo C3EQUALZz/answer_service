@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Iterable
 from typing import Final, override
 
 from sqlalchemy import delete, func, select
@@ -9,6 +10,7 @@ from answer_service.application.common.ports.gateways import (
     CatalogStatistics,
     QACatalogCommandGateway,
     QACatalogQueryGateway,
+    QAPairView,
 )
 from answer_service.domain.common.events_collection import EventsCollection
 from answer_service.domain.indexing.entities.qa_pair import QAPair
@@ -95,6 +97,45 @@ class SqlAlchemyQACatalogGateway(QACatalogCommandGateway, QACatalogQueryGateway)
                 question=row.question,
                 answer=row.answer,
                 category=row.category,
+            )
+            for row in rows
+        }
+
+    @override
+    async def read_views(
+        self,
+        external_ids: Iterable[ExternalId],
+    ) -> dict[ExternalId, QAPairView]:
+        """Reads the ranked pairs as columns, in one round trip.
+
+        Ranking hands over a handful of ids out of a whole catalog, so this is
+        deliberately a narrow ``IN`` rather than a join against the ranking:
+        the ordering already exists in memory and the database has no business
+        recomputing it.
+        """
+        ids = list(external_ids)
+        if not ids:
+            return {}
+
+        stmt = select(
+            qa_pairs_table.c.external_id,
+            qa_pairs_table.c.question,
+            qa_pairs_table.c.answer,
+            qa_pairs_table.c.category,
+        ).where(qa_pairs_table.c.external_id.in_(ids))
+
+        try:
+            rows = (await self._session.execute(stmt)).all()
+        except SQLAlchemyError as e:
+            msg = "Failed to read the ranked QA pairs."
+            raise RepoError(msg) from e
+
+        return {
+            row.external_id: QAPairView(
+                external_id=row.external_id.value,
+                question=row.question.content,
+                answer=row.answer.content,
+                category=row.category.value,
             )
             for row in rows
         }

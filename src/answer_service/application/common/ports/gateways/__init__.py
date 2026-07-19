@@ -7,7 +7,11 @@ from .analytics_query_gateway import (
 from .indexing_task_command_gateway import IndexingTaskCommandGateway
 from .indexing_task_query_gateway import IndexingTaskQueryGateway, IndexingTaskView
 from .qa_catalog_command_gateway import QACatalogCommandGateway
-from .qa_catalog_query_gateway import CatalogStatistics, QACatalogQueryGateway
+from .qa_catalog_query_gateway import (
+    CatalogStatistics,
+    QACatalogQueryGateway,
+    QAPairView,
+)
 
 __all__ = [
     "AnalyticsCommandGateway",
@@ -18,6 +22,7 @@ __all__ = [
     "IndexingTaskView",
     "QACatalogCommandGateway",
     "QACatalogQueryGateway",
+    "QAPairView",
     "QueryFrequency",
     "QueryStatistics",
 ]

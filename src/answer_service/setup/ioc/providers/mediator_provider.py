@@ -74,6 +74,12 @@ from answer_service.application.queries.indexing.get_indexing_task.handler impor
 from answer_service.application.queries.indexing.get_indexing_task.query import (
     GetIndexingTaskQuery,
 )
+from answer_service.application.queries.search.search_qa_pairs.handler import (
+    SearchQAPairsHandler,
+)
+from answer_service.application.queries.search.search_qa_pairs.query import (
+    SearchQAPairsQuery,
+)
 from answer_service.infrastructure.mediator import (
     Chain,
     ChainImpl,
@@ -115,6 +121,7 @@ def make_registry() -> Registry:
     registry.add_request_handler(RecordQueryCommand, RecordQueryHandler)
 
     registry.add_request_handler(GetIndexingTaskQuery, GetIndexingTaskHandler)
+    registry.add_request_handler(SearchQAPairsQuery, SearchQAPairsHandler)
     registry.add_request_handler(GetStatisticsQuery, GetStatisticsHandler)
     registry.add_request_handler(
         ListUnansweredQueriesQuery,

@@ -7,7 +7,7 @@ still recorded so tests can assert a handler wrote through the gateway.
 """
 
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from typing import final, override
 from uuid import UUID
 
@@ -20,6 +20,7 @@ from answer_service.application.common.ports.gateways import (
     IndexingTaskView,
     QACatalogCommandGateway,
     QACatalogQueryGateway,
+    QAPairView,
     QueryFrequency,
     QueryStatistics,
 )
@@ -96,6 +97,22 @@ class InMemoryQACatalog(QACatalogCommandGateway, QACatalogQueryGateway):
         return {
             external_id: pair.content.fingerprint
             for external_id, pair in self.pairs.items()
+        }
+
+    @override
+    async def read_views(
+        self,
+        external_ids: Iterable[ExternalId],
+    ) -> dict[ExternalId, QAPairView]:
+        return {
+            external_id: QAPairView(
+                external_id=external_id.value,
+                question=pair.content.question.content,
+                answer=pair.content.answer.content,
+                category=pair.content.category.value,
+            )
+            for external_id in external_ids
+            if (pair := self.pairs.get(external_id)) is not None
         }
 
     @override

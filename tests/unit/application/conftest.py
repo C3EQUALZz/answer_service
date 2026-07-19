@@ -39,6 +39,9 @@ from answer_service.application.queries.analytics.list_unanswered_queries.handle
 from answer_service.application.queries.indexing.get_indexing_task.handler import (
     GetIndexingTaskHandler,
 )
+from answer_service.application.queries.search.search_qa_pairs.handler import (
+    SearchQAPairsHandler,
+)
 from answer_service.domain.analytics.factories.query_log_factory import QueryLogFactory
 from answer_service.domain.common.events_collection import EventsCollection
 from answer_service.domain.indexing.entities.indexing_task import IndexingTask
@@ -55,6 +58,7 @@ from tests.unit.factories.handler_factories import (
     create_relay_outbox_handler,
     create_remove_qa_pair_handler,
     create_run_indexing_handler,
+    create_search_qa_pairs_handler,
     create_upsert_qa_pair_handler,
 )
 from tests.unit.factories.outbox_factories import make_outbox_message
@@ -72,6 +76,8 @@ from tests.unit.stubs.infrastructure import (
     RecordingSearchIndexWriter,
     RecordingTaskScheduler,
     RecordingTransactionManager,
+    StubDenseRetriever,
+    StubLexicalRetriever,
     StubQueryLogIdGenerator,
     StubTaskIdGenerator,
 )
@@ -280,6 +286,29 @@ def upsert_qa_pair_handler(
     index_writer: RecordingSearchIndexWriter,
 ) -> UpsertQAPairHandler:
     return create_upsert_qa_pair_handler(catalog=catalog, index_writer=index_writer)
+
+
+@pytest.fixture()
+def dense_retriever() -> StubDenseRetriever:
+    return StubDenseRetriever()
+
+
+@pytest.fixture()
+def lexical_retriever() -> StubLexicalRetriever:
+    return StubLexicalRetriever()
+
+
+@pytest.fixture()
+def search_qa_pairs_handler(
+    catalog: InMemoryQACatalog,
+    dense_retriever: StubDenseRetriever,
+    lexical_retriever: StubLexicalRetriever,
+) -> SearchQAPairsHandler:
+    return create_search_qa_pairs_handler(
+        catalog=catalog,
+        dense_retriever=dense_retriever,
+        lexical_retriever=lexical_retriever,
+    )
 
 
 @pytest.fixture()

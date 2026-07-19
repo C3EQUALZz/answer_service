@@ -21,7 +21,9 @@ from answer_service.application.common.ports.outbox import (
     OutboxPublisher,
 )
 from answer_service.application.common.ports.search import (
+    DenseRetriever,
     IndexDocument,
+    LexicalRetriever,
     SearchIndexWriter,
 )
 from answer_service.application.common.ports.task_manager.payloads.base import (
@@ -43,6 +45,8 @@ from answer_service.domain.common.error import AppError
 from answer_service.domain.common.event import Event
 from answer_service.domain.indexing.value_objects.external_id import ExternalId
 from answer_service.domain.indexing.value_objects.task_id import TaskId
+from answer_service.domain.search.value_objects.scored_candidate import ScoredCandidate
+from answer_service.domain.search.value_objects.search_criteria import SearchCriteria
 
 
 class BrokerUnavailableError(AppError):
@@ -162,6 +166,34 @@ class RecordingSearchIndexWriter(SearchIndexWriter):
     @override
     async def delete(self, external_ids: Sequence[ExternalId]) -> None:
         self.deleted.extend(external_ids)
+
+
+@final
+class StubDenseRetriever(DenseRetriever):
+    """Returns whatever the test staged, in the order it staged it."""
+
+    def __init__(self) -> None:
+        self.candidates: list[ScoredCandidate] = []
+        self.criteria: list[SearchCriteria] = []
+
+    @override
+    async def retrieve(self, criteria: SearchCriteria) -> Sequence[ScoredCandidate]:
+        self.criteria.append(criteria)
+        return self.candidates
+
+
+@final
+class StubLexicalRetriever(LexicalRetriever):
+    """Returns whatever the test staged, in the order it staged it."""
+
+    def __init__(self) -> None:
+        self.candidates: list[ScoredCandidate] = []
+        self.criteria: list[SearchCriteria] = []
+
+    @override
+    async def retrieve(self, criteria: SearchCriteria) -> Sequence[ScoredCandidate]:
+        self.criteria.append(criteria)
+        return self.candidates
 
 
 @final

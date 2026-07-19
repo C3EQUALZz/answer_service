@@ -20,6 +20,8 @@ from dishka import AsyncContainer, Scope, make_async_container
 from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient, Response
+from qdrant_client import QdrantClient
+from qdrant_client.models import Filter
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 from taskiq import AsyncBroker
@@ -195,17 +197,33 @@ async def _schema(engine: AsyncEngine) -> AsyncIterator[None]:
 
 
 @pytest.fixture()
-async def clean_tables(_schema: None, engine: AsyncEngine) -> None:
-    """Empties every table before each test.
+async def clean_tables(
+    _schema: None,
+    engine: AsyncEngine,
+    container: AsyncContainer,
+) -> None:
+    """Empties every table and the vector store before each test.
 
     Requested with ``pytest.mark.usefixtures`` rather than as an argument: the
     test never touches its value, only its effect. Truncating up front rather
     than cleaning up afterwards means a test that fails leaves its rows behind
     to be inspected.
+
+    The vector store is cleared here too, and not because a test asked. It is
+    application-scoped, so points projected by one test survive into every test
+    after it — which shows up as a later test finding a pair it never indexed.
     """
     tables = ", ".join(table.name for table in metadata.sorted_tables)
     async with engine.begin() as connection:
         await connection.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
+
+    qdrant_config = await container.get(QdrantConfig)
+    qdrant_client = await container.get(QdrantClient)
+    if qdrant_client.collection_exists(qdrant_config.collection_name):
+        qdrant_client.delete(
+            collection_name=qdrant_config.collection_name,
+            points_selector=Filter(must=[]),
+        )
 
 
 @pytest.fixture()

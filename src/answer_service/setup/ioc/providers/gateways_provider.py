@@ -19,6 +19,7 @@ from answer_service.application.common.ports.outbox import (
 )
 from answer_service.application.common.ports.search import (
     DenseRetriever,
+    LexicalRetriever,
     SearchIndexWriter,
 )
 from answer_service.application.common.ports.source_file.source_file_reader import (
@@ -47,6 +48,9 @@ from answer_service.infrastructure.adapters.persistence import (
     SqlAlchemyOutboxGateway,
     SqlAlchemyQACatalogGateway,
     SqlAlchemyTransactionManager,
+)
+from answer_service.infrastructure.adapters.search.postgres_lexical_retriever import (
+    PostgresLexicalRetriever,
 )
 from answer_service.infrastructure.adapters.search.qdrant_dense_retriever import (
     QdrantDenseRetriever,
@@ -105,6 +109,7 @@ def gateways_provider() -> Provider:
     provider.provide(source=LangChainEmbedder, provides=Embedder)
     provider.provide(source=QdrantSearchIndexWriter, provides=SearchIndexWriter)
     provider.provide(source=QdrantDenseRetriever, provides=DenseRetriever)
+    provider.provide(source=PostgresLexicalRetriever, provides=LexicalRetriever)
 
     provider.provide(source=LocalSourceFileStorage, provides=SourceFileStorage)
     provider.provide(source=PolarsSourceFileReader, provides=SourceFileReader)
