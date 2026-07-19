@@ -239,7 +239,7 @@ git clone https://github.com/C3EQUALZz/answer_service
 cd answer_service
 
 uv sync --group dev
-cp deploy/env.example .env.dev   # then fill in MISTRAL_API_KEY
+cp deploy/env.example .env   # then fill in MISTRAL_API_KEY
 ```
 
 ### With Docker

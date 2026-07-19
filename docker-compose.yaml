@@ -5,7 +5,7 @@ x-app: &app
     context: .
     dockerfile: deploy/prod/answer_service/Dockerfile
   image: answer-service:local
-  env_file: [.env.dev]
+  env_file: [.env]
   environment:
     POSTGRES_HOST: postgres
     NATS_HOST: nats

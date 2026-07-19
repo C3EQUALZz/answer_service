@@ -13,7 +13,7 @@ testcontainers).
 ```sh
 uv sync --group dev
 uv run prek install --install-hooks   # lint + conventional commit-msg hooks
-cp deploy/env.example .env.dev        # then fill in MISTRAL_API_KEY
+cp deploy/env.example .env        # then fill in MISTRAL_API_KEY
 docker compose up -d postgres nats redis qdrant
 just migrate
 ```

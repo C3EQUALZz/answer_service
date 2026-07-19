@@ -93,33 +93,33 @@ ci: linter static-analysis test-ci
 docker-build:
   docker build -f deploy/prod/answer_service/Dockerfile -t answer-service:local .
 
-# --env-file is not optional: `env_file:` only injects variables into the
+# The env file must be `.env`: `env_file:` only injects variables into the
 # containers, while ${VAR:?} interpolation in the compose file itself reads the
-# project env file. Without it the credentials resolve empty.
+# project env file, which compose looks for under that exact name.
 [doc("Start the local environment (postgres, nats, redis, qdrant, app)")]
 [group("docker")]
 up *params:
-  docker compose --env-file .env.dev up -d {{params}}
+  docker compose up -d {{params}}
 
 [doc("Start only the backing services, for running the app on the host")]
 [group("docker")]
 up-deps:
-  docker compose --env-file .env.dev up -d postgres nats redis qdrant
+  docker compose up -d postgres nats redis qdrant
 
 [doc("Stop the local environment")]
 [group("docker")]
 down *params:
-  docker compose --env-file .env.dev down {{params}}
+  docker compose down {{params}}
 
 [doc("Tail the logs of the application services")]
 [group("docker")]
 logs *params:
-  docker compose --env-file .env.dev logs -f {{params}}
+  docker compose logs -f {{params}}
 
-[doc("Validate the compose file against .env.dev")]
+[doc("Validate the compose file against .env")]
 [group("docker")]
 compose-config:
-  docker compose --env-file .env.dev config --quiet
+  docker compose config --quiet
 
 [doc("Pre-commit modified files")]
 [group("pre-commit")]
@@ -135,19 +135,19 @@ pre-commit-all:
 [doc("Generate a new Alembic migration (usage: just migration 'add users table')")]
 [group("migrations")]
 migration msg:
-  uv run --active dotenv -f .env.dev run -- alembic revision --autogenerate -m "{{msg}}"
+  uv run --active dotenv -f .env run -- alembic revision --autogenerate -m "{{msg}}"
 
 [doc("Apply all pending Alembic migrations")]
 [group("migrations")]
 migrate:
-  uv run --active dotenv -f .env.dev run -- alembic upgrade head
+  uv run --active dotenv -f .env run -- alembic upgrade head
 
 [doc("Roll back the last Alembic migration")]
 [group("migrations")]
 migrate-down:
-  uv run --active dotenv -f .env.dev run -- alembic downgrade -1
+  uv run --active dotenv -f .env run -- alembic downgrade -1
 
 [doc("Show current migration revision")]
 [group("migrations")]
 migrate-current:
-  uv run --active dotenv -f .env.dev run -- alembic current
+  uv run --active dotenv -f .env run -- alembic current
