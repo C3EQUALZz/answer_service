@@ -206,10 +206,15 @@ async def test_a_query_of_only_stopwords_matches_nothing(
 def retriever_with_floor(
     session: AsyncSession,
     relative_floor: float,
+    absolute_floor: float = 0.0,
 ) -> PostgresLexicalRetriever:
+    """Defaults the absolute floor off, so a test names the floor it is about."""
     return PostgresLexicalRetriever(
         session,
-        SearchConfig(lexical_relative_floor=relative_floor),
+        SearchConfig(
+            lexical_relative_floor=relative_floor,
+            lexical_absolute_floor=absolute_floor,
+        ),
     )
 
 
@@ -297,13 +302,13 @@ async def test_a_pair_sharing_one_incidental_word_is_dropped(
 
 
 @pytest.mark.usefixtures("_catalog")
-async def test_the_best_match_always_survives_any_floor(
+async def test_a_short_query_is_not_punished_for_being_short(
     container: AsyncContainer,
 ) -> None:
-    """A relative floor can never empty a result set that had a match.
+    """The relative floor never empties a set, which is why ranking is its job.
 
-    That is the property an absolute floor lacked: it could reject every
-    candidate of a perfectly answerable query just because the query was short.
+    ``ts_rank_cd`` grows with query length, so ranking against a constant would
+    reject every candidate of a perfectly answerable one-word query.
     """
     async with container(scope=Scope.REQUEST) as scope:
         session = await scope.get(AsyncSession)
@@ -313,3 +318,48 @@ async def test_the_best_match_always_survives_any_floor(
 
     assert found
     assert found[0].external_id.value == "q-refund"
+
+
+@pytest.mark.usefixtures("_catalog")
+async def test_a_query_about_nothing_in_the_catalog_is_refused(
+    container: AsyncContainer,
+) -> None:
+    """What the relative floor structurally cannot do, and the gap report needs.
+
+    Every candidate is compared to the best in its own set, so the best scores
+    1.0 against itself and survives every relative setting from 0.0 to 1.0. A
+    query that matches only junk is therefore always answered from its best
+    piece of junk. Here "days" brushes one word of one answer and nothing else.
+    """
+    query = criteria("how many days")
+
+    async with container(scope=Scope.REQUEST) as scope:
+        session = await scope.get(AsyncSession)
+        relative_only = await retriever_with_floor(session, 1.0).retrieve(query)
+        with_absolute = await retriever_with_floor(
+            session,
+            SearchConfig().lexical_relative_floor,
+            SearchConfig().lexical_absolute_floor,
+        ).retrieve(query)
+
+    assert relative_only
+    assert with_absolute == []
+
+
+@pytest.mark.usefixtures("_catalog")
+async def test_a_real_match_survives_the_absolute_floor(
+    container: AsyncContainer,
+) -> None:
+    """The floor must refuse junk without refusing the catalog's own subjects."""
+    async with container(scope=Scope.REQUEST) as scope:
+        session = await scope.get(AsyncSession)
+        retriever = retriever_with_floor(
+            session,
+            SearchConfig().lexical_relative_floor,
+            SearchConfig().lexical_absolute_floor,
+        )
+        password = await retriever.retrieve(criteria("I forgot my password"))
+        shipping = await retriever.retrieve(criteria("how long does shipping take"))
+
+    assert [candidate.external_id.value for candidate in password] == ["q-password"]
+    assert [candidate.external_id.value for candidate in shipping] == ["q-shipping"]

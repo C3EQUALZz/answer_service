@@ -87,8 +87,15 @@ The two are filtered differently because their scores mean different things. A
 cosine similarity is a property of the embedding model, so an absolute floor
 keeps its meaning as the catalog grows. `ts_rank_cd` is not: it rises with the
 number of matched terms, so the same pair scores 1.4 for "orders" and 3.2 for
-"how do I track my order". The lexical side is therefore filtered relative to
+"how do I track my order". The lexical side is therefore *ranked* relative to
 the best match for its own query, which needs no recalibration at any size.
+
+Ranking relative to the best cannot refuse, though — the best always scores 1.0
+against itself — so a query matching nothing meaningful is still answered from
+its best piece of junk. The lexical side carries a second, absolute floor for
+that: the question is weighted above the answer in the search vector, and the
+floor sits between the two, so a pair that merely brushed one word of answer
+prose is not an answer.
 
 ### Ask flow
 
@@ -390,8 +397,9 @@ TASKIQ_DURABLE=answer_service_durable
 TASKIQ_QUEUE=answer_service_workers
 
 # Search relevance — see "Relevance thresholds" in AGENTS.md before changing
-SEARCH_DENSE_SCORE_FLOOR=0.7
+SEARCH_DENSE_SCORE_FLOOR=0.64
 SEARCH_LEXICAL_RELATIVE_FLOOR=0.35
+SEARCH_LEXICAL_ABSOLUTE_FLOOR=0.5
 
 # Indexing — how long a run may stay RUNNING before the reaper fails it
 INDEXING_STUCK_AFTER_SECONDS=3600
@@ -412,9 +420,11 @@ FASTAPI_DEBUG=false
 > The process also refuses to start while Qdrant is unreachable — the vector
 > store validates its collection on construction, and every write path needs it.
 >
-> `SEARCH_DENSE_SCORE_FLOOR` is the one setting here that no test can validate:
-> too high and the service silently refuses questions it could have answered.
-> Watch `unanswered_rate` on `/api/v1/statistics` after changing it.
+> Both search floors decide which questions the service is allowed to answer at
+> all, and getting them wrong does not raise — it silently refuses questions the
+> catalog covers, or answers ones it does not. `tests/quality` measures both
+> against a live deployment; see "Relevance thresholds" in AGENTS.md before
+> changing either, and watch `unanswered_rate` on `/api/v1/statistics` after.
 
 ### Running the Services
 

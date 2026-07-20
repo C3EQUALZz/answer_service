@@ -18,5 +18,6 @@ class SearchEnvSourceFactory(SourceFactory):
             field_mapping={
                 F[SearchConfig].dense_score_floor: "SEARCH_DENSE_SCORE_FLOOR",
                 F[SearchConfig].lexical_relative_floor: "SEARCH_LEXICAL_RELATIVE_FLOOR",
+                F[SearchConfig].lexical_absolute_floor: "SEARCH_LEXICAL_ABSOLUTE_FLOOR",
             },
         )

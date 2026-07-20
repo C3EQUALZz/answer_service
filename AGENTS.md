@@ -327,30 +327,51 @@ Read these before touching the corresponding area.
   build. `docker compose exec api python -c "import inspect; ..."` first.
 - **`ts_rank_cd` is not comparable between queries.** It grows with the number
   of matched terms, so the same pair scored 1.4 for "orders" and 3.2 for "how do
-  I track my order". An absolute lexical threshold therefore measures query
-  length, not relevance — which is why that floor is relative. Normalisation
-  flags do not rescue it: the bounded variant still moved 0.58 → 0.76 on that
-  same pair.
+  I track my order". Ranking lexical candidates against a constant therefore
+  measures query length, not relevance — which is why that floor is relative.
+  Normalisation flags do not rescue it: the bounded variant still moved
+  0.58 → 0.76 on that same pair.
+- **A relative floor cannot refuse.** Every candidate is compared to the best in
+  its own result set, so the best scores 1.0 against itself and survives every
+  setting from 0.0 to 1.0 — a query matching only junk is always answered from
+  its best piece of junk. "what time does the museum close" returned five
+  unrelated pairs tied at exactly 0.4 and all four search-quality tests were red
+  because of it. `SEARCH_LEXICAL_ABSOLUTE_FLOOR` is the second condition, and it
+  is a threshold rather than a ranking, so the incomparability above does not
+  apply to it. Its default of 0.5 is the `setweight` boundary: the question is
+  weighted `A` (1.0) and the answer `B` (0.4), so it admits matches that touched
+  the question and rejects those that only brushed one word of answer prose.
 
 ## Relevance thresholds
 
 `SEARCH_DENSE_SCORE_FLOOR` decides which questions the service is allowed to
-answer at all. **The current default is a guess**, set by hand against a
-24-pair sample catalog, and no test can tell you it is wrong: a floor that is
-too high does not fail, it silently refuses questions the catalog could have
-answered, and the users simply leave.
+answer at all. A floor that is too high does not fail, it silently refuses
+questions the catalog could have answered, and the users simply leave.
 
-Do not try to calibrate it from synthetic labels. Asking the catalog its own
+The default of 0.64 is measured, not guessed. `tests/quality/dataset.py` labels
+35 paraphrased questions with the pair that should answer each and 8 questions
+the catalog genuinely cannot answer; running them against a deployment with the
+floor disabled gives both distributions. On-topic pairs scored 0.6253–0.8227,
+the best any off-topic query reached was 0.6307, and they overlap by 0.005 — so
+no floor is clean, and 0.64 is the crossover that costs one on-topic question to
+refuse all eight off-topic ones. The previous 0.7 refused the same eight and
+lost nine more real questions, which is strictly worse.
+
+Do not calibrate it from *synthetic* labels. Asking the catalog its own
 questions leaks — the identical text is in the index, so it scores ~1.0 and
 tells you nothing about paraphrased questions. Inventing nonsense queries fails
 the other way: real unanswerable questions are *on topic but uncovered*
 ("do you ship to Brazil?"), and score far higher than deliberate gibberish. Both
 errors widen the gap artificially and yield a threshold that looks well
 separated and is not. An earlier calibration script did exactly this and was
-deleted for it.
+deleted for it. The dataset above avoids both because a person wrote every
+entry: the paraphrases never reuse the catalog's own wording, and the negatives
+are real questions rather than gibberish.
 
-What works today, with no new code: set the floor, then watch `unanswered_rate`
-on `/v1/statistics/` and read `/v1/statistics/unanswered`. Sensible on-topic
+Re-measure with `just up`, upload `examples/qa_catalog_sample.xlsx`, then
+`QUALITY_BASE_URL=http://localhost:8080 pytest tests/quality -m quality`. In
+production, where there are no labels, watch `unanswered_rate` on
+`/api/v1/statistics` and read `/api/v1/statistics/unanswered`: sensible on-topic
 questions in that list mean the floor is too high; junk means it is working.
 
 What would let it be automated: a "did this answer help" label on served

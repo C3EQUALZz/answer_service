@@ -18,6 +18,8 @@ MAX_COSINE: Final[float] = 1.0
 MIN_RATIO: Final[float] = 0.0
 MAX_RATIO: Final[float] = 1.0
 
+MIN_RANK: Final[float] = 0.0
+
 
 class SearchConfigLoader(ConfigLoader[SearchConfig]):
     """``dature``-backed loader for :class:`SearchConfig`."""
@@ -48,6 +50,13 @@ class SearchConfigLoader(ConfigLoader[SearchConfig]):
                 error_message=(
                     "SEARCH_LEXICAL_RELATIVE_FLOOR is a fraction of the best "
                     f"match and must be between {MIN_RATIO} and {MAX_RATIO}"
+                ),
+            ),
+            V.root(
+                lambda c: c.lexical_absolute_floor >= MIN_RANK,
+                error_message=(
+                    "SEARCH_LEXICAL_ABSOLUTE_FLOOR is a ts_rank_cd value and must "
+                    f"be at least {MIN_RANK}"
                 ),
             ),
         )

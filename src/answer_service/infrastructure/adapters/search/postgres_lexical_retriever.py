@@ -42,20 +42,26 @@ class PostgresLexicalRetriever(LexicalRetriever):
     def __init__(self, session: AsyncSession, search_config: SearchConfig) -> None:
         self._session: Final[AsyncSession] = session
         self._relative_floor: Final[float] = search_config.lexical_relative_floor
+        self._absolute_floor: Final[float] = search_config.lexical_absolute_floor
 
     @override
     async def retrieve(self, criteria: SearchCriteria) -> Sequence[ScoredCandidate]:
         logger.debug(
             "postgres_lexical: searching '%s', top_k=%d, relative floor=%.2f, "
-            "category=%s",
+            "absolute floor=%.2f, category=%s",
             criteria.query.content,
             criteria.top_k.value,
             self._relative_floor,
+            self._absolute_floor,
             criteria.category,
         )
 
         try:
-            statement = self._statement(criteria, self._relative_floor)
+            statement = self._statement(
+                criteria,
+                self._relative_floor,
+                self._absolute_floor,
+            )
             rows = (await self._session.execute(statement)).all()
         except SQLAlchemyError as e:
             logger.exception("postgres_lexical: search failed")
@@ -63,9 +69,11 @@ class PostgresLexicalRetriever(LexicalRetriever):
             raise RepoError(msg) from e
 
         logger.info(
-            "postgres_lexical: %d candidate(s) within %.0f%% of the best match",
+            "postgres_lexical: %d candidate(s) within %.0f%% of the best match and "
+            "above %.2f",
             len(rows),
             self._relative_floor * 100,
+            self._absolute_floor,
         )
         for row in rows:
             logger.debug(
@@ -111,8 +119,9 @@ class PostgresLexicalRetriever(LexicalRetriever):
         cls,
         criteria: SearchCriteria,
         relative_floor: float,
+        absolute_floor: float,
     ) -> Select[tuple[ExternalId, float]]:
-        """Keeps the matches that rank near the best one for *this* query.
+        """Keeps the matches that rank near the best one and are good in themselves.
 
         Cover density ranking rewards matched terms appearing close together,
         which is what distinguishes a pair that is *about* the query from one
@@ -120,7 +129,7 @@ class PostgresLexicalRetriever(LexicalRetriever):
         sharing a single incidental word matches at all, so something has to
         stop that from counting as an answer.
 
-        The comparison is against the best match in the same result set rather
+        Ordering is done relative to the best match in the same result set rather
         than against a constant, because ``ts_rank_cd`` is not comparable across
         queries: it grows with the number of matched terms, so a longer question
         clears any fixed number that a one-word question never could. Measured
@@ -128,6 +137,14 @@ class PostgresLexicalRetriever(LexicalRetriever):
         scored 3.2. As a fraction of their own best match, the incidental
         third-place pair sits at 0.57 and 0.25 — which *is* comparable, and needs
         no recalibration as the catalog grows.
+
+        That comparison alone can never refuse, though. The best match scores
+        1.0 against itself at every setting, so a query whose only matches are
+        junk still serves its best piece of junk: "what time does the museum
+        close" returned five unrelated pairs tied at 0.4, every one of them
+        within any fraction of the best. The absolute floor is the second
+        condition — not a ranking, so the incomparability above does not apply,
+        but a statement that a match on the answer body alone is not an answer.
         """
         query = cls._tsquery(criteria.query.content)
         rank = func.ts_rank_cd(qa_pairs_table.c.search_vector, query).label(RANK_LABEL)
@@ -146,6 +163,7 @@ class PostgresLexicalRetriever(LexicalRetriever):
         return (
             select(ranked.c.external_id, ranked.c[RANK_LABEL])
             .where(ranked.c[RANK_LABEL] >= best * relative_floor)
+            .where(ranked.c[RANK_LABEL] >= absolute_floor)
             .order_by(ranked.c[RANK_LABEL].desc(), ranked.c.external_id)
             .limit(criteria.top_k.value)
         )

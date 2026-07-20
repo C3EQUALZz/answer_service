@@ -15,33 +15,50 @@ class SearchConfig:
     The two retrievers are filtered on different principles, because their scores
     mean different things.
 
-    A cosine similarity is a property of the embedding model: 0.7 means roughly
+    A cosine similarity is a property of the embedding model: 0.64 means roughly
     the same closeness whether the catalog holds twenty pairs or twenty million,
-    so an absolute floor keeps its meaning as the corpus grows.
-
-    The default is nonetheless a guess, and there is no test that can tell you
-    it is wrong — a badly set floor does not fail, it silently refuses questions
-    the catalog could have answered. Until served queries carry a "did this
-    help" label, the honest way to check it is to watch ``unanswered_rate`` on
-    ``/api/v1/statistics`` and read ``/api/v1/statistics/unanswered``: sensible
-    on-topic questions in that list mean the floor is too high, junk means it is
-    doing its job.
+    so an absolute floor keeps its meaning as the corpus grows. The default is
+    the measured crossover on ``tests/quality/dataset.py``, whose 35 paraphrased
+    questions and 8 unanswerable ones are labelled by hand: on-topic pairs scored
+    0.6253 to 0.8227 and the best any off-topic query reached was 0.6307. The two
+    distributions overlap by 0.005, so no floor separates them perfectly, and
+    0.64 is the value that costs one on-topic question to refuse all eight
+    off-topic ones. Raising it buys nothing — 0.70 refused the same eight and
+    lost nine more real questions.
 
     ``ts_rank_cd`` is not such a property. Its value rises with the number of
     matched terms and the length of the document, so one pair scored 1.4 for the
     query "orders" and 3.2 for "how do I track my order" — a 2.3x difference from
-    query length alone, on an identical match. No absolute number separates a
-    good match from a bad one across queries like that, and normalising does not
-    rescue it: the bounded variant still moved from 0.58 to 0.76 on that pair.
-    The lexical side is therefore filtered *relative to the best match for its
-    own query*, which normalises itself and needs no calibration at any size.
+    query length alone, on an identical match. No absolute number *ranks*
+    reliably across queries like that, which is why the lexical side is filtered
+    relative to the best match for its own query.
+
+    A relative floor alone cannot refuse, though: it compares each candidate to
+    the best in its own set, so the best always scores 1.0 and survives every
+    setting from 0.0 to 1.0. When a query matches nothing meaningful, that
+    winner is junk and is served as an answer. ``lexical_absolute_floor`` is what
+    supplies the missing "and the best is itself good enough", and it is a
+    threshold rather than a ranking, so ``ts_rank_cd``'s incomparability across
+    queries does not apply.
+
+    Its default is a weight boundary rather than a tuning knob. The search vector
+    weights the question ``A`` and the answer ``B``, which ``ts_rank_cd`` scores
+    1.0 and 0.4, so 0.5 admits exactly the matches that touched the question text
+    and rejects those that only brushed a word of the answer prose. Every
+    off-topic query measured leaked through at precisely 0.4 — "what time does
+    the museum close" matched five unrelated pairs, all tied, all served.
 
     Attributes:
         dense_score_floor: Minimum cosine similarity a dense candidate needs.
         lexical_relative_floor: Fraction of the best ``ts_rank_cd`` in the same
             result set a lexical candidate must reach. ``0.0`` keeps everything
-            the tsquery matched; ``1.0`` keeps only joint winners.
+            the tsquery matched; ``1.0`` keeps only joint winners. Orders the
+            survivors; it cannot empty the set.
+        lexical_absolute_floor: Minimum ``ts_rank_cd`` any lexical candidate
+            needs regardless of its neighbours. ``0.0`` restores the previous
+            behaviour, where no query was ever lexically unanswerable.
     """
 
-    dense_score_floor: float = 0.7
+    dense_score_floor: float = 0.64
     lexical_relative_floor: float = 0.35
+    lexical_absolute_floor: float = 0.5
