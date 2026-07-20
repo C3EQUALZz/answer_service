@@ -169,7 +169,7 @@ class SqlAlchemyAnalyticsGateway(AnalyticsCommandGateway, AnalyticsQueryGateway)
 
     @staticmethod
     def _matching(filters: QueryLogFilters) -> ColumnElement[bool]:
-        """Every filter the listing supports, ANDed into one predicate.
+        """Every filter the listing supports, combined with AND into one predicate.
 
         Shared by the page and its count so the two can never disagree about
         what is being listed.

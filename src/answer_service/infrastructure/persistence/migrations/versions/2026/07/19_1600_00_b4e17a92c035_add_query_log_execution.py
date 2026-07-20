@@ -57,6 +57,8 @@ def upgrade() -> None:
         "query_logs",
         ["occurred_at"],
         unique=False,
+        # SUCCEEDED is a module-level constant, no user input reaches this text().
+        # nosemgrep
         postgresql_where=sa.text(f"results_count = 0 AND status = '{SUCCEEDED}'"),
     )
 
