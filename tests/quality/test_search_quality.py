@@ -45,8 +45,14 @@ EXPECTED_PAIRS: Final[int] = 40
 
 @pytest.fixture(scope="session")
 def client() -> Iterator[httpx.Client]:
-    """A client against a live deployment, or a skip explaining what is missing."""
-    with httpx.Client(base_url=BASE_URL, timeout=TIMEOUT) as http:
+    """A client against a live deployment, or a skip explaining what is missing.
+
+    ``trust_env`` is off because httpx otherwise routes through ``HTTP_PROXY``,
+    and a proxy set for outbound traffic swallows requests to a deployment on
+    localhost — which surfaces as read timeouts and 503s that look like the
+    service failing rather than the client never reaching it.
+    """
+    with httpx.Client(base_url=BASE_URL, timeout=TIMEOUT, trust_env=False) as http:
         try:
             http.get("/healthcheck/").raise_for_status()
         except httpx.HTTPError as error:

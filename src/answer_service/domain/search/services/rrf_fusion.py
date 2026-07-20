@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     from answer_service.domain.search.value_objects.top_k import TopK
 
 DEFAULT_RRF_K: int = 60
+DEFAULT_DENSE_WEIGHT: float = 1.0
+DEFAULT_LEXICAL_WEIGHT: float = 1.0
 
 
 logger: Final[logging.Logger] = logging.getLogger(__name__)
@@ -24,17 +26,33 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 class RrfFusion(BaseDomainService):
     """Reciprocal Rank Fusion of dense and lexical retrieval results.
 
-    Each candidate contributes ``1 / (k + rank)`` per retriever it appears in
-    (rank is 1-based position in that retriever's ordered list); contributions
-    are summed into the final score. Fusion is rank-based, so it is immune to
-    the differing score scales of the two retrievers.
+    Each candidate contributes ``weight / (k + rank)`` per retriever it appears
+    in (rank is 1-based position in that retriever's ordered list);
+    contributions are summed into the final score. Fusion is rank-based, so it
+    is immune to the differing score scales of the two retrievers.
+
+    The weights exist because the two retrievers are not equally trustworthy on
+    the input this service actually receives. Lexical terms are OR-ed, so a pair
+    sharing one word of a natural question is ranked at all, and a pair the
+    embedding model put first can be pushed down the fused list by pairs that
+    merely share vocabulary. Weighting is the only lever for that: the floors
+    decide *whether* a candidate competes, and this decides how much its
+    position counts once it does.
 
     Ordering is deterministic: results are sorted by final score descending,
     ties broken by ``external_id`` ascending.
     """
 
-    def __init__(self, k: int = DEFAULT_RRF_K) -> None:
+    def __init__(
+        self,
+        k: int = DEFAULT_RRF_K,
+        *,
+        dense_weight: float = DEFAULT_DENSE_WEIGHT,
+        lexical_weight: float = DEFAULT_LEXICAL_WEIGHT,
+    ) -> None:
         self._k: Final[int] = k
+        self._dense_weight: Final[float] = dense_weight
+        self._lexical_weight: Final[float] = lexical_weight
 
     @staticmethod
     def _best_positions(
@@ -62,9 +80,12 @@ class RrfFusion(BaseDomainService):
         dense_by_id = self._best_positions(dense)
         lexical_by_id = self._best_positions(lexical)
         logger.debug(
-            "rrf_fusion: fusing dense=%d lexical=%d, k=%d, top_k=%d",
+            "rrf_fusion: fusing dense=%d (weight %.2f) lexical=%d (weight %.2f), "
+            "k=%d, top_k=%d",
             len(dense_by_id),
+            self._dense_weight,
             len(lexical_by_id),
+            self._lexical_weight,
             self._k,
             top_k.value,
         )
@@ -76,9 +97,9 @@ class RrfFusion(BaseDomainService):
 
             contribution = 0.0
             if dense_hit is not None:
-                contribution += 1.0 / (self._k + dense_hit[0] + 1)
+                contribution += self._dense_weight / (self._k + dense_hit[0] + 1)
             if lexical_hit is not None:
-                contribution += 1.0 / (self._k + lexical_hit[0] + 1)
+                contribution += self._lexical_weight / (self._k + lexical_hit[0] + 1)
 
             fused.append(
                 (

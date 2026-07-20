@@ -152,3 +152,53 @@ def test_a_candidate_present_twice_in_one_retriever_keeps_its_best_position() ->
     assert ranked_external_ids(results) == ["a", "b"]
     assert results[0].scores.final.value == pytest.approx(1.0 / (DEFAULT_RRF_K + 1))
     assert results[0].scores.dense == Score(value=0.9)
+
+
+def test_the_default_is_plain_unweighted_fusion() -> None:
+    """The tuned ratio belongs to configuration; the domain default is neutral."""
+    results = RrfFusion().fuse(
+        dense=make_scored_candidates(("a", 0.9)),
+        lexical=make_scored_candidates(("b", 5.0)),
+        top_k=TopK(value=2),
+    )
+
+    expected = pytest.approx(1.0 / (DEFAULT_RRF_K + 1))
+    assert results[0].scores.final.value == expected
+    assert results[1].scores.final.value == expected
+
+
+def test_weighting_a_retriever_up_lets_it_win_a_disagreement() -> None:
+    """What the weights exist for, stated as the case that motivated them.
+
+    Each retriever ranks its own pick first and neither returns the other's, so
+    unweighted fusion ties them and the ordering falls to ``external_id``. That
+    tie is what cost top-1 accuracy on natural questions, where the lexical side
+    ranks on shared vocabulary alone.
+    """
+    dense = make_scored_candidates(("z-dense-pick", 0.9))
+    lexical = make_scored_candidates(("a-lexical-pick", 5.0))
+
+    balanced = RrfFusion().fuse(dense=dense, lexical=lexical, top_k=TopK(value=2))
+    dense_led = RrfFusion(dense_weight=2.0).fuse(
+        dense=dense,
+        lexical=lexical,
+        top_k=TopK(value=2),
+    )
+
+    assert balanced[0].external_id.value == "a-lexical-pick"
+    assert balanced[0].scores.final.value == pytest.approx(
+        balanced[1].scores.final.value,
+    )
+    assert dense_led[0].external_id.value == "z-dense-pick"
+    assert dense_led[0].scores.final.value > dense_led[1].scores.final.value
+
+
+def test_weighting_cannot_admit_a_candidate_neither_retriever_returned() -> None:
+    """Weights reorder what cleared the floors; they are not a second floor."""
+    results = RrfFusion(dense_weight=100.0, lexical_weight=0.01).fuse(
+        dense=make_scored_candidates(("a", 0.9)),
+        lexical=make_scored_candidates(("b", 5.0)),
+        top_k=TopK(value=10),
+    )
+
+    assert sorted(result.external_id.value for result in results) == ["a", "b"]

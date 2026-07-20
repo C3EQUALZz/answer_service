@@ -368,8 +368,22 @@ deleted for it. The dataset above avoids both because a person wrote every
 entry: the paraphrases never reuse the catalog's own wording, and the negatives
 are real questions rather than gibberish.
 
+`SEARCH_DENSE_WEIGHT` is the other half, and it is not interchangeable with the
+floors: a floor decides whether a candidate competes, the weight decides how much
+its position counts once it does. Dense is weighted 2:1 because lexical terms are
+OR-ed, so a pair sharing one word of a natural question competes on equal footing
+with the pair the embedding model ranked first — on the quality set the correctly
+labelled pair held the highest cosine in its result set and still came third.
+Swept against that set, top-1 ran 69% at 1:1, 77% at 1.5:1 and 80% from 2:1
+onwards; 3:1 and 5:1 measured identically, so 2:1 is the smallest ratio reaching
+the plateau. Refusal rates did not move at any ratio, as expected — weighting
+reorders what already cleared the floors.
+
 Re-measure with `just up`, upload `examples/qa_catalog_sample.xlsx`, then
-`QUALITY_BASE_URL=http://localhost:8080 pytest tests/quality -m quality`. In
+`QUALITY_BASE_URL=http://localhost:8080 pytest tests/quality -m quality`. Sweep
+a setting without a rebuild by starting a throwaway API beside the stack:
+`docker compose run -d --rm --name probe-api -e SEARCH_DENSE_WEIGHT=3.0
+-p 8081:8080 --no-deps api`. In
 production, where there are no labels, watch `unanswered_rate` on
 `/api/v1/statistics` and read `/api/v1/statistics/unanswered`: sensible on-topic
 questions in that list mean the floor is too high; junk means it is working.

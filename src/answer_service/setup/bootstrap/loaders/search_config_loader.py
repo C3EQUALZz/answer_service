@@ -20,6 +20,8 @@ MAX_RATIO: Final[float] = 1.0
 
 MIN_RANK: Final[float] = 0.0
 
+MIN_WEIGHT: Final[float] = 0.0
+
 
 class SearchConfigLoader(ConfigLoader[SearchConfig]):
     """``dature``-backed loader for :class:`SearchConfig`."""
@@ -57,6 +59,14 @@ class SearchConfigLoader(ConfigLoader[SearchConfig]):
                 error_message=(
                     "SEARCH_LEXICAL_ABSOLUTE_FLOOR is a ts_rank_cd value and must "
                     f"be at least {MIN_RANK}"
+                ),
+            ),
+            V.root(
+                lambda c: c.dense_weight > MIN_WEIGHT and c.lexical_weight > MIN_WEIGHT,
+                error_message=(
+                    "SEARCH_DENSE_WEIGHT and SEARCH_LEXICAL_WEIGHT scale a "
+                    f"retriever's say in the ranking and must be above {MIN_WEIGHT}; "
+                    "a retriever is silenced by its floor, not by its weight"
                 ),
             ),
         )

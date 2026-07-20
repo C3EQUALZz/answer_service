@@ -68,9 +68,12 @@ OFF_TOPIC: Final[tuple[str, ...]] = (
 
 # Minimum share of PARAPHRASED that must rank its pair first, and within top 3.
 # Set from the measured baseline, not from ambition: a regression suite that has
-# never passed teaches nobody anything.
-MIN_TOP_1: Final[float] = 0.70
-MIN_TOP_3: Final[float] = 0.85
+# never passed teaches nobody anything. Measured 80% and 94% once the lexical
+# side could refuse and fusion weighted dense 2:1; each floor leaves room for a
+# single query to regress before it trips.
+MIN_TOP_1: Final[float] = 0.75
+MIN_TOP_3: Final[float] = 0.90
 
-# Share of OFF_TOPIC that must come back empty.
-MIN_REFUSED: Final[float] = 0.75
+# Share of OFF_TOPIC that must come back empty. Measured 100%, so this trips on
+# the first leak — which is the half that decays silently and needs to.
+MIN_REFUSED: Final[float] = 0.875

@@ -19,5 +19,7 @@ class SearchEnvSourceFactory(SourceFactory):
                 F[SearchConfig].dense_score_floor: "SEARCH_DENSE_SCORE_FLOOR",
                 F[SearchConfig].lexical_relative_floor: "SEARCH_LEXICAL_RELATIVE_FLOOR",
                 F[SearchConfig].lexical_absolute_floor: "SEARCH_LEXICAL_ABSOLUTE_FLOOR",
+                F[SearchConfig].dense_weight: "SEARCH_DENSE_WEIGHT",
+                F[SearchConfig].lexical_weight: "SEARCH_LEXICAL_WEIGHT",
             },
         )

@@ -97,6 +97,12 @@ that: the question is weighted above the answer in the search vector, and the
 floor sits between the two, so a pair that merely brushed one word of answer
 prose is not an answer.
 
+The floors decide which candidates compete; the fusion weights decide how much
+each retriever's opinion counts once they do. Dense is weighted 2:1 because
+lexical terms are OR-ed, so a pair sharing one word of a natural question would
+otherwise outrank the pair the embedding model put first. The ratio is swept
+against `tests/quality`, where it moved top-1 accuracy from 69% to 80%.
+
 ### Ask flow
 
 ```
@@ -400,6 +406,8 @@ TASKIQ_QUEUE=answer_service_workers
 SEARCH_DENSE_SCORE_FLOOR=0.64
 SEARCH_LEXICAL_RELATIVE_FLOOR=0.35
 SEARCH_LEXICAL_ABSOLUTE_FLOOR=0.5
+SEARCH_DENSE_WEIGHT=2.0
+SEARCH_LEXICAL_WEIGHT=1.0
 
 # Indexing — how long a run may stay RUNNING before the reaper fails it
 INDEXING_STUCK_AFTER_SECONDS=3600

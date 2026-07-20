@@ -48,6 +48,28 @@ class SearchConfig:
     off-topic query measured leaked through at precisely 0.4 — "what time does
     the museum close" matched five unrelated pairs, all tied, all served.
 
+    The floors decide which candidates compete. ``dense_weight`` and
+    ``lexical_weight`` decide how much each retriever's opinion counts once they
+    do, by scaling its ``1 / (k + rank)`` contribution to the fused score. They
+    are not interchangeable with the floors: no floor can reorder a candidate
+    that passed it, and lowering one to suppress a retriever would delete its
+    recall rather than discount its ranking.
+
+    Weighting is needed because lexical terms are OR-ed, so a pair sharing one
+    word of a natural question competes on equal footing with the pair the
+    embedding model ranked first. Measured on the quality set, that cost top-1
+    accuracy outright: the pair a human labelled correct held the highest cosine
+    in the result set and still came third, behind two pairs that merely shared
+    vocabulary.
+
+    The default 2:1 is swept rather than chosen. Top-1 accuracy over the 35
+    labelled paraphrases ran 69% at 1:1, 77% at 1.5, and 80% from 2.0 onwards —
+    3.0 and 5.0 measured identically, so 2.0 is the smallest ratio that reaches
+    the plateau, and the one that leaves the lexical side the most say it can
+    have without costing accuracy. Refusals were unaffected throughout, which is
+    the expected shape: weighting reorders candidates that already cleared their
+    floors and cannot admit one that did not.
+
     Attributes:
         dense_score_floor: Minimum cosine similarity a dense candidate needs.
         lexical_relative_floor: Fraction of the best ``ts_rank_cd`` in the same
@@ -57,8 +79,14 @@ class SearchConfig:
         lexical_absolute_floor: Minimum ``ts_rank_cd`` any lexical candidate
             needs regardless of its neighbours. ``0.0`` restores the previous
             behaviour, where no query was ever lexically unanswerable.
+        dense_weight: Multiplier on each dense candidate's fused contribution.
+        lexical_weight: Multiplier on each lexical candidate's fused
+            contribution. Only the ratio between the two matters; equal values
+            are plain RRF.
     """
 
     dense_score_floor: float = 0.64
     lexical_relative_floor: float = 0.35
     lexical_absolute_floor: float = 0.5
+    dense_weight: float = 2.0
+    lexical_weight: float = 1.0
