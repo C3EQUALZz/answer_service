@@ -2,5 +2,9 @@
 *.xlsx binary
 *.xls binary
 
+# Bind-mounted into Linux containers verbatim: a CRLF shebang makes the kernel
+# look for `/bin/sh\r`, and the container crash-loops on an unreadable entrypoint.
+deploy/** text eol=lf
+
 # Keep the lockfile out of diffs and merges — regenerate it with `uv lock`.
 uv.lock -diff linguist-generated
