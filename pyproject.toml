@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "hatchling==1.29.0",
+    "hatchling==1.31.0",
     "hatch-vcs==0.5.0",
 ]
 build-backend = "hatchling.build"
@@ -44,10 +44,10 @@ dependencies = [
     # 415, and only in an image built with --no-dev.
     "fastexcel>=0.20.2",
     "fastapi==0.139.2",
-    "langchain-core>=1.4.9",
+    "langchain-core>=1.5.1",
     "langchain-mistralai>=1.1.6",
     "langchain-qdrant>=1.1.0",
-    "polars==1.42.1",
+    "polars==1.43.0",
     "python-multipart==0.0.32",
     "qdrant-client>=1.18.0",
     "sqlalchemy[asyncio]==2.0.51",
@@ -75,9 +75,9 @@ lint = [
     "bandit>=1.8.6",
     "codespell>=2.4.1",
     "mypy>=1.18.2",
-    "ruff>=0.14.0",
-    "semgrep>=1.139.0",
-    "zizmor>=1.14.2",
+    "ruff>=0.16.0",
+    "semgrep>=1.171.0",
+    "zizmor>=1.28.0",
     "import-linter>=2.10",
 ]
 test = [
