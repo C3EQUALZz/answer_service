@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "hatchling==1.29.0",
+    "hatchling==1.31.0",
     "hatch-vcs==0.5.0",
 ]
 build-backend = "hatchling.build"
@@ -43,8 +43,8 @@ dependencies = [
     # The engine behind pl.read_excel. Without it every .xlsx upload answers
     # 415, and only in an image built with --no-dev.
     "fastexcel>=0.20.2",
-    "fastapi==0.139.2",
-    "langchain-core>=1.4.9",
+    "fastapi==0.141.1",
+    "langchain-core>=1.5.3",
     "langchain-mistralai>=1.1.6",
     "langchain-qdrant>=1.1.0",
     "polars==1.42.1",
@@ -57,7 +57,7 @@ dependencies = [
     "taskiq-redis==1.2.3",
     # `fastapi_app` imports uvicorn directly. It was only ever present as a
     # transitive development dependency, so a `--no-dev` install had no server.
-    "uvicorn[standard]==0.51.0",
+    "uvicorn[standard]==0.52.0",
 ]
 
 [project.urls]
@@ -69,15 +69,15 @@ Tracker = "https://github.com/C3EQUALZz/answer_service/issues"
 dev = [
     {include-group = "lint"},
     {include-group = "test"},
-    "prek>=0.2.5",
+    "prek>=0.4.11",
 ]
 lint = [
     "bandit>=1.8.6",
     "codespell>=2.4.1",
     "mypy>=1.18.2",
-    "ruff>=0.14.0",
-    "semgrep>=1.139.0",
-    "zizmor>=1.14.2",
+    "ruff>=0.16.1",
+    "semgrep>=1.172.0",
+    "zizmor>=1.28.0",
     "import-linter>=2.10",
 ]
 test = [
