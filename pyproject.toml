@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "hatchling==1.29.0",
+    "hatchling==1.32.4",
     "hatch-vcs==0.5.0",
 ]
 build-backend = "hatchling.build"
@@ -36,7 +36,7 @@ requires-python = ">=3.14"
 
 dependencies = [
     "adaptix==3.0.0b12",
-    "alembic==1.18.5",
+    "alembic==1.20.0",
     "asyncpg==0.31.0",
     "dature==0.22.4",
     "dishka==1.10.1",
@@ -47,17 +47,17 @@ dependencies = [
     "langchain-core>=1.4.9",
     "langchain-mistralai>=1.1.6",
     "langchain-qdrant>=1.1.0",
-    "polars==1.42.1",
+    "polars==1.44.2",
     "python-multipart==0.0.32",
     "qdrant-client>=1.18.0",
-    "sqlalchemy[asyncio]==2.0.51",
+    "sqlalchemy[asyncio]==2.1.2",
     "structlog==26.1.0",
-    "taskiq==0.12.4",
-    "taskiq-nats==0.6.0",
-    "taskiq-redis==1.2.3",
+    "taskiq==0.13.0",
+    "taskiq-nats==0.7.0",
+    "taskiq-redis==1.2.4",
     # `fastapi_app` imports uvicorn directly. It was only ever present as a
     # transitive development dependency, so a `--no-dev` install had no server.
-    "uvicorn[standard]==0.51.0",
+    "uvicorn[standard]==0.54.0",
 ]
 
 [project.urls]
