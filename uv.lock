@@ -231,7 +231,7 @@ dev = [
     { name = "pytest-mypy", specifier = ">=1.0.0" },
     { name = "ruff", specifier = ">=0.14.0" },
     { name = "semgrep", specifier = ">=1.139.0" },
-    { name = "testcontainers", extras = ["postgres"], specifier = ">=4.10.0" },
+    { name = "testcontainers", extras = ["postgres"], specifier = ">=4.14.2" },
     { name = "xlsxwriter", specifier = ">=3.2.9" },
     { name = "zizmor", specifier = ">=1.14.2" },
 ]
@@ -252,7 +252,7 @@ test = [
     { name = "pytest-asyncio", specifier = ">=1.2.0" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
     { name = "pytest-mypy", specifier = ">=1.0.0" },
-    { name = "testcontainers", extras = ["postgres"], specifier = ">=4.10.0" },
+    { name = "testcontainers", extras = ["postgres"], specifier = ">=4.14.2" },
     { name = "xlsxwriter", specifier = ">=3.2.9" },
 ]
 
